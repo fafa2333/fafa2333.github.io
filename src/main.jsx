@@ -153,7 +153,7 @@ function App() {
   useEffect(() => {
     const mm = gsap.matchMedia();
     mm.add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.from('.hero-title-group', { y: 28, opacity: 0, duration: 1, ease: 'power3.out', delay: .12 });
+      if (!project) gsap.from('.hero-title-group', { y: 28, opacity: 0, duration: 1, ease: 'power3.out', delay: .12 });
       gsap.utils.toArray('[data-reveal]').forEach(el => gsap.from(el, { y: 30, opacity: 0, duration: .8, ease: 'power2.out', scrollTrigger: { trigger: el, start: 'top 94%', once: true } }));
       if (!project) gsap.to('.hero-background', { yPercent: 12, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
     }, app);
