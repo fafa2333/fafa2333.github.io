@@ -14,7 +14,8 @@
 - `assets/site.css`：首页和子页面共用的工业风样式。
 
 公开联系邮箱为 `yufuli99@gmail.com`，点击可打开邮件客户端。
-语言能力完整列出 CET-4、CET-6 和 IELTS 7.0；教育经历按本科到硕士的时间顺序展示。
+语言能力与前三项共用同样的技能卡片样式，完整列出 CET-4、CET-6 和 IELTS 7.0。
+教育经历按本科到硕士的时间顺序展示，学校和专业采用中英文双语排版。
 
 首页照片已移除，原照片文件暂存于 `assets/portrait.png`，页面不引用它。
 
@@ -29,3 +30,5 @@
 
 网页使用原生 HTML 和 CSS，不需要安装依赖或构建。
 GitHub Pages 从 `main` 分支的根目录发布，`.nojekyll` 让静态文件直接上线。
+
+英文名称参考学校官方资料：[北京理工大学](https://isc.bit.edu.cn/admissionsaid/undergraduatate/mechanical/znzzgc/index.htm)、[北理工英文培养资料](https://ac.bit.edu.cn/docs/2023-04/60a4e9e332e84f23982c0cd345da0190.pdf)、[南洋理工大学](https://www.ntu.edu.sg/education/graduate-programme/master-of-science-in-smart-manufacturing)。
