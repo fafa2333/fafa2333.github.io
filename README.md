@@ -1,17 +1,20 @@
 # 李玉夫的作品集
 
 浅水泥灰与白色的工业感个人作品集，适配手机与电脑。
-首页展示个人基本信息、教育背景与技能；下方目录链接到三个独立项目子页面。
+首页首屏仅展示姓名、个人简介与联系邮箱；下方依次为作品集目录、技术与语言能力、教育背景时间轴。
 
 网站地址：https://fafa2333.github.io/
 
 ## 页面结构
 
-- `index.html`：个人信息和作品集目录。
+- `index.html`：01 个人简介、02 作品集目录、03 技术与语言能力、04 教育背景。
 - `projects/butterfly.html`：仿生蝴蝶飞行器。
 - `projects/obstacle-robot.html`：仿生越障机器人。
 - `projects/material-handling-robot.html`：移动物料搬运机器人。
 - `assets/site.css`：首页和子页面共用的工业风样式。
+
+公开联系邮箱为 `yufuli99@gmail.com`，点击可打开邮件客户端。
+语言能力完整列出 CET-4、CET-6 和 IELTS 7.0；教育经历按本科到硕士的时间顺序展示。
 
 首页照片已移除，原照片文件暂存于 `assets/portrait.png`，页面不引用它。
 
