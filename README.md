@@ -1,19 +1,28 @@
 # 李玉夫的作品集
 
 浅水泥灰与白色的工业感个人作品集，适配手机与电脑。
-首页展示个人基本信息、教育背景与技能；下方是三个工程项目的可展开目录。
+首页展示个人基本信息、教育背景与技能；下方目录链接到三个独立项目子页面。
 
 网站地址：https://fafa2333.github.io/
 
-## 修改内容
+## 页面结构
 
-编辑 `index.html` 即可更新页面中的作品、介绍与样式。个人照片位于 `assets/portrait.png`。
+- `index.html`：个人信息和作品集目录。
+- `projects/butterfly.html`：仿生蝴蝶飞行器。
+- `projects/obstacle-robot.html`：仿生越障机器人。
+- `projects/material-handling-robot.html`：移动物料搬运机器人。
+- `assets/site.css`：首页和子页面共用的工业风样式。
+
+首页照片已移除，原照片文件暂存于 `assets/portrait.png`，页面不引用它。
+
+## 后续补充材料
+
+每个项目页已有项目概览、5 个工作流程阶段和3 组图片区域，共6 个图片位置。
+流程标题是初步整理的框架，后续可按实际材料调整。
+
+将图片放入对应项目的资源目录，替换页面中的 `.media-placeholder`，并更新图片说明。
+图片可使用 `<img src="../assets/项目目录/图片名.jpg" alt="具体图片内容">`；图片样式保持宽度100%，高度自动。
+工作流程中的 `.slot-note` 为待补充说明的位置，可替换为实际过程描述。
+
 网页使用原生 HTML 和 CSS，不需要安装依赖或构建。
-
-## GitHub Pages
-
-仓库名称：`fafa2333.github.io`。
-
-在仓库的 Settings → Pages 中选择 Deploy from a branch，分支设为 `main`，目录设为 `/ (root)`。
-
-`.nojekyll` 用于让 GitHub Pages 直接发布静态文件。
+GitHub Pages 从 `main` 分支的根目录发布，`.nojekyll` 让静态文件直接上线。
