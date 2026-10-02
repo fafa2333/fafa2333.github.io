@@ -1,0 +1,173 @@
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import projects from './projects.json';
+import { media } from './media';
+import './styles.css';
+
+gsap.registerPlugin(ScrollTrigger);
+const email = 'yufuli99@gmail.com';
+const intro = '我专注于智能制造与机械结构设计，围绕仿生机构和移动机器人开展工程实践。从运动分析、结构建模与仿真优化，到零部件加工和样机调试，我希望让设计在真实场景中得到验证，将想法转化为可实现的工程方案。';
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const Arrow = ({ diagonal = true }) => <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d={diagonal ? 'M5 19 19 5M5 5h14v14' : 'M4 12h16m-6-6 6 6-6 6'} stroke="currentColor" strokeWidth="1.5" /></svg>;
+
+function Header({ project }) {
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const button = useRef(null);
+  const links = project ? [['overview', '项目概览'], ['workflow', '工作流程'], ['gallery', '图片档案']] : [['works', '作品集'], ['skills', '个人能力'], ['education', '教育背景']];
+  useEffect(() => {
+    const scroll = () => setScrolled(window.scrollY > 32);
+    const key = e => { if (e.key === 'Escape') { setOpen(false); button.current?.focus(); } };
+    scroll(); window.addEventListener('scroll', scroll, { passive: true }); window.addEventListener('keydown', key);
+    return () => { window.removeEventListener('scroll', scroll); window.removeEventListener('keydown', key); };
+  }, []);
+  return <header className={`site-header ${scrolled ? 'is-scrolled' : ''} ${open ? 'menu-open' : ''}`}>
+    <a className="brand" href={project ? '/index.html' : '#profile'} aria-label="李玉夫作品集首页"><span className="brand-mark">LY.</span><span>LI YUFU<span className="brand-sub">机械设计 / 智能制造</span></span></a>
+    <button ref={button} className="menu-toggle" type="button" aria-expanded={open} aria-controls="main-nav" onClick={() => setOpen(!open)}>{open ? '关闭' : '菜单'}<span>{open ? '−' : '+'}</span></button>
+    <nav id="main-nav" aria-label="主要导航" className={open ? 'is-open' : ''}>
+      {links.map(([id, title], i) => <a key={id} href={`#${id}`} onClick={() => setOpen(false)}><span className="nav-number">0{i + (project ? 1 : 2)}</span>{title}</a>)}
+      <a className="nav-contact" href="#contact" onClick={() => setOpen(false)}>联系我 <Arrow /></a>
+    </nav>
+  </header>;
+}
+
+function SectionLabel({ number, english, children }) {
+  return <div className="section-label"><span className="section-index">{number}</span><span>{children}</span><span className="label-en">{english}</span></div>;
+}
+
+function Hero() {
+  const video = useRef(null);
+  const [paused, setPaused] = useState(reducedMotion);
+  const [failed, setFailed] = useState(false);
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const el = video.current;
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const change = () => setPaused(query.matches);
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting));
+    const visibility = () => setVisible(!document.hidden && el?.getBoundingClientRect().bottom > 0);
+    if (el) observer.observe(el);
+    query.addEventListener('change', change); document.addEventListener('visibilitychange', visibility);
+    return () => { observer.disconnect(); query.removeEventListener('change', change); document.removeEventListener('visibilitychange', visibility); };
+  }, []);
+  useEffect(() => {
+    if (!video.current) return;
+    if (paused || !visible) video.current.pause();
+    else video.current.play().catch(() => setPaused(true));
+  }, [paused, visible]);
+  return <section id="profile" className="hero" aria-labelledby="hero-title">
+    <div className="hero-background" aria-hidden="true"><video ref={video} muted loop playsInline preload="metadata" poster={media.heroPoster} onError={() => setFailed(true)}>{media.heroVideo && <source src={media.heroVideo} type="video/mp4" />}</video><div className="hero-wash" /></div>
+    <div className="hero-content shell">
+      <div className="hero-overline"><span className="signal-dot" /><span>MECHANICAL DESIGN × SMART MANUFACTURING</span></div>
+      <div className="hero-title-group"><span className="hero-name-cn">李玉夫 / 工程作品集</span><h1 id="hero-title"><span>LI YUFU</span><span className="title-period">.</span></h1><p className="hero-statement">从想法，到结构。<br />让设计在真实世界中得到验证。</p></div>
+      <div className="hero-bottom"><a className="hero-scroll" href="#works"><span className="circle-button"><Arrow diagonal={false} /></span><span>探索作品<span className="mono">SCROLL TO EXPLORE</span></span></a><div className="hero-intro"><p>{intro}</p><a href={`mailto:${email}`}>{email}<Arrow /></a></div></div>
+    </div>
+    <div className="hero-video-caption"><span className="mono">{media.heroIsPlaceholder ? 'V01 / 工程线框动效 · 可替换为背景视频' : 'V01 / MOTION STUDY'}</span>{!failed && <button type="button" onClick={() => setPaused(!paused)} aria-label={paused ? '播放背景视频' : '暂停背景视频'}>{paused ? '播放' : '暂停'} <span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span></button>}</div>
+  </section>;
+}
+
+function TechnicalDrawing({ type = 'butterfly' }) {
+  const gridId = useId();
+  return <svg className={`technical-drawing drawing-${type}`} viewBox="0 0 600 380" fill="none" aria-hidden="true">
+    <defs><pattern id={gridId} width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0v40" stroke="currentColor" strokeOpacity=".09" /></pattern></defs>
+    <rect width="600" height="380" fill={`url(#${gridId})`} />
+    <g stroke="currentColor" strokeWidth="1.15">
+      <path d="M40 190h520M300 24v332" strokeDasharray="4 7" opacity=".28" />
+      {type === 'butterfly' ? <><path d="M296 184C254 92 143 52 105 102c-32 42 39 110 175 98M304 184c42-92 153-132 191-82 32 42-39 110-175 98M280 200c-74-16-157 17-143 57 16 43 109 42 156-51M320 200c74-16 157 17 143 57-16 43-109 42-156-51" /><path d="m290 154 20 0 12 62-22 36-22-36zM106 102l174 98 13-45M494 102l-174 98-13-45M137 257l156-51M463 257l-156-51" /><circle cx="300" cy="190" r="9" /><path d="M94 322h412m-412-6v12m412-12v12" opacity=".5" /></> : type === 'obstacle-robot' ? <><circle cx="265" cy="176" r="69" /><circle cx="265" cy="176" r="42" /><circle cx="265" cy="176" r="9" /><path d="m196 176-56 114h64l85-88 99 65 85-111-23-22-90 85-43-77zM265 107v138M196 176h138M140 290h350" /><path d="M82 271c77-235 350-253 431-81" strokeDasharray="5 7" opacity=".45" /><path d="m498 179 15 11 5-18" /><circle cx="388" cy="267" r="8" /><circle cx="450" cy="134" r="8" /></> : type === 'material-handling-robot' ? <><path d="m154 252 113-59 159 49-111 66zM154 252v29l161 58 111-67v-30M315 308v31" /><path d="M275 222V112l39-21 23 13v121M275 112l39 12 23-20M314 124v101M314 91l66-37 79 44-31 17-48-28-43 26M459 98v48l-18 10-20-15v-26M441 156v20l-22 13m22-13 21 12" /><ellipse cx="203" cy="291" rx="16" ry="24" transform="rotate(-20 203 291)" /><ellipse cx="374" cy="309" rx="16" ry="24" transform="rotate(20 374 309)" /></> : <><path d="m133 140 167-82 167 82-167 82zM133 140v115l167 82 167-82V140M300 222v115M199 173v114M401 173v114" /><path d="M110 348h380M97 110v177" opacity=".5" /></>}
+    </g><g fill="currentColor" opacity=".6"><circle cx="40" cy="40" r="2" /><circle cx="560" cy="340" r="2" /></g>
+  </svg>;
+}
+
+function ImagePanel({ src, alt, code, type, className = '', title }) {
+  return <div className={`image-panel ${src ? 'has-image' : ''} ${className}`}>
+    {src ? <img src={src} alt={alt} loading="lazy" decoding="async" /> : <><TechnicalDrawing type={type} /><div className="image-panel-top mono"><span>{code}</span><span>＋</span></div><div className="image-panel-bottom"><span>{title || '作品图片预留'}</span><span className="mono">IMAGE TO FOLLOW</span></div></>}
+  </div>;
+}
+
+function Works() {
+  return <section id="works" className="works section-space shell">
+    <div className="section-head" data-reveal><SectionLabel number="02" english="SELECTED WORK">作品集目录</SectionLabel><div className="section-heading-row"><h2>把思考，<br /><span className="muted">做成看得见的作品。</span></h2><p>三项工程实践。<br />从机构设计、仿真优化，到样机开发。</p></div></div>
+    <div className="project-grid">{projects.map(p => <a key={p.slug} className={`project-card project-${p.number}`} href={`/projects/${p.slug}.html`} data-reveal aria-label={`查看${p.title}`}>
+      <div className="project-card-media"><ImagePanel src={p.cover} alt={p.coverAlt} code={`P${p.number} / ${p.english}`} type={p.slug} title="项目封面 · 待补充实际作品图片" /><span className="project-open"><Arrow /></span></div>
+      <div className="project-copy"><div className="project-kicker mono"><span>{p.number} / {p.english}</span><span>{p.period}</span></div><h3>{p.title}</h3><p>{p.description}</p><div className="project-card-meta"><span>{p.subtitle}</span><span>{p.role}</span></div></div>
+    </a>)}</div>
+  </section>;
+}
+
+const skills = [
+  ['CAD & DESIGN', '建模与工程表达', ['SolidWorks、Creo、AutoCAD', '机械结构建模、工程图绘制', 'KeyShot 模型渲染'], 'M12 3 21 8v9l-9 5-9-5V8zM3 8l9 5 9-5M12 13v9'],
+  ['SIMULATION', '仿真与结构优化', ['Ansys、SolidWorks Simulation', 'Adams 动力学仿真', 'Matlab 运动学求解'], 'M3 20h18M3 14c4-15 7-12 10-4s5 7 8-7'],
+  ['FABRICATION', '加工与样机开发', ['3D 打印、激光切割', '零部件选型、BOM 整理', '样机组装与调试'], 'M4 7h16v14H4zM8 7V3h8v4M4 13h16M10 13v4h4v-4'],
+  ['LANGUAGE', '语言能力', ['CET-4 · 大学英语四级', 'CET-6 · 大学英语六级', 'IELTS · 雅思总分 7.0'], 'M3 12h18M12 3c-8 5-8 13 0 18M12 3c8 5 8 13 0 18'],
+];
+function Skills() {
+  return <section id="skills" className="skills-section section-space"><div className="shell">
+    <div className="section-head" data-reveal><SectionLabel number="03" english="CAPABILITIES">个人能力</SectionLabel><div className="section-heading-row"><h2>从建模到实现。</h2><p>贯穿完整工程开发过程的工具与实践。</p></div></div>
+    <div className="skills-grid">{skills.map(([en, title, lines, path], i) => <article className="skill-card" key={en} data-reveal><div className="skill-top"><span className="mono">0{i + 1}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.15" aria-hidden="true">{i === 3 && <circle cx="12" cy="12" r="9" />}<path d={path} /></svg></div><span className="skill-en mono">{en}</span><h3>{title}</h3><ul>{lines.map(line => <li key={line}>{line}</li>)}</ul></article>)}</div>
+  </div></section>;
+}
+
+const education = [
+  { period: '2021.09 — 2025.06', degree: '本科', school: '北京理工大学', schoolEn: 'Beijing Institute of Technology', major: '智能制造工程', majorEn: 'Intelligent Manufacturing Engineering' },
+  { period: '2025.08 — 2027.01（预计）', degree: '硕士 · 在读', school: '南洋理工大学', schoolEn: 'Nanyang Technological University', major: '智能制造', majorEn: 'Master of Science in Smart Manufacturing' },
+];
+function Education() {
+  return <section id="education" className="education section-space shell"><div className="section-head" data-reveal><SectionLabel number="04" english="EDUCATION">教育背景</SectionLabel><div className="section-heading-row"><h2>持续学习，<br /><span className="muted">持续探索。</span></h2><p>从智能制造工程，<br />到智能制造的进一步探索。</p></div></div>
+    <div className="education-layout"><figure className="education-image" data-reveal><ImagePanel src={media.educationImage} alt="校园或实验室影像" code="D02 / LEARNING CONTEXT" type="education" title="校园 / 实验室影像预留" /><figcaption>学习与实践发生的地方。</figcaption></figure><ol className="education-timeline">{education.map(e => <li className="education-entry" key={e.school} data-reveal><div className="education-top"><span className="mono">{e.period}</span><span className="degree-tag">{e.degree}</span></div><div className="bilingual school"><h3>{e.school}</h3><p lang="en">{e.schoolEn}</p></div><div className="bilingual major"><p>{e.major}</p><p lang="en">{e.majorEn}</p></div></li>)}</ol></div>
+  </section>;
+}
+
+function Contact() {
+  const [copied, setCopied] = useState(false);
+  const timer = useRef(null);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  async function copy() {
+    try { await navigator.clipboard.writeText(email); setCopied(true); clearTimeout(timer.current); timer.current = setTimeout(() => setCopied(false), 2200); }
+    catch { window.location.href = `mailto:${email}`; }
+  }
+  return <footer id="contact" className="contact"><div className="shell"><div data-reveal><SectionLabel number="05" english="GET IN TOUCH">保持联系</SectionLabel><div className="contact-heading"><h2>下一个想法，<br />一起让它发生<span className="accent-text">。</span></h2><a className="contact-orbit magnetic" href={`mailto:${email}`} aria-label="发送邮件联系李玉夫"><Arrow /></a></div></div><div className="contact-bottom"><div className="contact-email"><span className="mono">EMAIL / 联系邮箱</span><a href={`mailto:${email}`}>{email}</a><button onClick={copy} type="button" aria-live="polite">{copied ? '已复制 ✓' : '复制邮箱 ↗'}</button></div><div className="contact-links"><a href="https://github.com/fafa2333" target="_blank" rel="noopener noreferrer">GitHub <Arrow /></a><a href="#main">返回顶部 ↑</a></div></div><div className="footer-line mono"><span>© {new Date().getFullYear()} LI YUFU</span><span>DESIGN. SIMULATE. MAKE.</span><span>个人作品集</span></div></div></footer>;
+}
+
+function ProjectPage({ project: p }) {
+  return <><section className="project-hero shell"><a className="breadcrumb" href="/index.html#works">← 返回作品集目录</a><div className="project-heading" data-reveal><SectionLabel number={p.number} english={p.english}>工程项目</SectionLabel><h1>{p.title}</h1><p>{p.description}</p><div className="project-facts"><span>{p.period}</span><span>{p.role}</span><span>{p.subtitle}</span></div></div><ImagePanel src={p.cover} alt={p.coverAlt} code={`P${p.number} / PROJECT COVER`} type={p.slug} className="project-cover" title="项目封面 · 模型 / 样机影像预留" /></section>
+    <section className="project-section shell section-space" id="overview"><SectionLabel number="01" english="OVERVIEW">项目概览</SectionLabel><div className="project-metrics" data-reveal><div><strong>{p.metric}</strong><span>{p.metricLabel}</span></div><div><strong>{p.secondMetric}</strong><span>{p.secondMetricLabel}</span></div></div><div className="overview-grid">{p.overview.map(item => <article key={item.title} data-reveal><h3>{item.title}</h3><p>{item.text}</p></article>)}</div></section>
+    <section className="workflow-section section-space" id="workflow"><div className="shell"><SectionLabel number="02" english="PROCESS">工作流程</SectionLabel><h2 data-reveal>从分析，到验证。</h2><div className="workflow-grid">{p.steps.map((step, i) => <article key={step.title} data-reveal><span className="step-number mono">0{i + 1}</span><h3>{step.title}</h3><p>{step.text}</p><span className="step-placeholder">详细流程与过程材料待补充</span></article>)}</div></div></section>
+    <section className="project-gallery shell section-space" id="gallery"><SectionLabel number="03" english="VISUAL ARCHIVE">图片与过程记录</SectionLabel><h2 data-reveal>工程过程，逐帧记录。</h2>{p.gallery.map((group, gi) => <section className="gallery-group" key={group.title}><div className="gallery-heading" data-reveal><span className="mono">GROUP 0{gi + 1}</span><h3>{group.title}</h3></div><div className="gallery-grid">{group.images.map((img, ii) => <figure key={img.title} data-reveal><ImagePanel src={img.src} alt={img.title} code={`FIG. 0${gi * 2 + ii + 1}`} type={p.slug} title={img.title} /><figcaption>{img.title}{!img.src && ' · 图片与说明待补充'}</figcaption></figure>)}</div></section>)}<a href="/index.html#works" className="back-projects">返回作品集目录 <Arrow diagonal={false} /></a></section></>;
+}
+
+function App() {
+  const app = useRef(null);
+  const slug = window.location.pathname.split('/').pop()?.replace('.html', '');
+  const project = projects.find(p => p.slug === slug);
+  useEffect(() => {
+    // React renders after the document's first anchor lookup. Restore direct links
+    // such as /index.html#works once the section exists.
+    const frame = requestAnimationFrame(() => {
+      const hash = window.location.hash.slice(1);
+      if (hash) document.getElementById(hash)?.scrollIntoView({ behavior: 'instant', block: 'start' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  useEffect(() => {
+    const mm = gsap.matchMedia();
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.from('.hero-title-group', { y: 28, opacity: 0, duration: 1, ease: 'power3.out', delay: .12 });
+      gsap.utils.toArray('[data-reveal]').forEach(el => gsap.from(el, { y: 30, opacity: 0, duration: .8, ease: 'power2.out', scrollTrigger: { trigger: el, start: 'top 94%', once: true } }));
+      if (!project) gsap.to('.hero-background', { yPercent: 12, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+    }, app);
+    const magnets = [...app.current.querySelectorAll('.magnetic')];
+    const move = e => {
+      if (reducedMotion() || e.pointerType !== 'mouse') return;
+      const r = e.currentTarget.getBoundingClientRect();
+      gsap.to(e.currentTarget, { x: (e.clientX - r.left - r.width / 2) * .13, y: (e.clientY - r.top - r.height / 2) * .13, duration: .4 });
+    };
+    const leave = e => gsap.to(e.currentTarget, { x: 0, y: 0, duration: .5 });
+    magnets.forEach(el => { el.addEventListener('pointermove', move); el.addEventListener('pointerleave', leave); });
+    return () => { mm.revert(); magnets.forEach(el => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerleave', leave); }); };
+  }, [project]);
+  return <div ref={app}><a className="skip-link" href="#main">跳到主要内容</a><Header project={project} /><main id="main">{project ? <ProjectPage project={project} /> : <><Hero /><Works /><Skills /><Education /></>}</main><Contact /></div>;
+}
+
+createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);
