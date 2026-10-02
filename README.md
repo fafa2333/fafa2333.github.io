@@ -19,7 +19,7 @@ pnpm preview
 
 ## 结构
 
-- `src/main.jsx`：共享导航、全屏 Hero、作品大卡片、四项个人能力、教育时间轴、收尾联系方式与项目详情组件。
+- `src/main.jsx`：共享导航、全屏 Hero、交互式作品目录、四项个人能力、教育时间轴、收尾联系方式与项目详情组件。
 - `src/styles.css`：响应式布局、统一排版和克制的工程视觉。
 - `src/projects.json`：三个项目的已有内容、指标、5 个流程阶段及每页 3 组 / 6 张图片。
 - `src/media.js`：Hero 视频、海报、教育装饰图设置。
@@ -31,7 +31,9 @@ pnpm preview
 
 首屏当前使用自制的 6 秒无声工程线框背景视频，属于抽象视觉占位，不代表真实项目模型。支持暂停、视频失败时使用海报、减少动态效果时默认静止，以及离开首屏时暂停。可在 `src/media.js` 替换 `heroVideo`、`heroPoster`，换上自己的视频后将 `heroIsPlaceholder` 设为 `false`。建议使用压缩后的横向 MP4 / H.264，提供静态海报。
 
-项目封面 `P01/P02/P03`：在 `src/projects.json` 填写 `cover` 和具体 `coverAlt`，封面同时用于目录与项目页。
+作品目录左侧为三个独立 SVG 线稿图标，纵向排列；点击后右侧切换对应大图、名称、简介、指标及详情入口。图像显现与文字错峰入场由 GSAP 实现，支持连续快速切换、方向键及 Home / End，尊重减少动态效果偏好。图标及大图占位属于概念示意，不是实际项目模型。
+
+项目封面 `P01/P02/P03`：在 `src/projects.json` 填写 `cover` 和具体 `coverAlt`，封面同时用于目录展示区与项目页。目录大图使用 `object-fit: contain`，推荐透明背景渲染或干净背景的整机图片。
 
 教育装饰图 `D02`：在 `src/media.js` 填写 `educationImage`。
 

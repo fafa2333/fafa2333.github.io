@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -86,13 +86,51 @@ function ImagePanel({ src, alt, code, type, className = '', title }) {
   </div>;
 }
 
+// Dedicated, compact line icons: flapping wings, flywheel linkage and mobile arm.
+function ProjectIcon({ type }) {
+  return <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {type === 'butterfly' ? <><path d="M37 36C26 13 9 16 11 29c1 12 16 17 26 13M43 36C54 13 71 16 69 29c-1 12-16 17-26 13M36 44c-14-4-28 4-21 13s19 4 23-10M44 44c14-4 28 4 21 13s-19 4-23-10M37 29h6l3 18-6 12-6-12zM13 24l23 16M67 24 44 40M18 55l18-11M62 55 44 44" /><circle cx="40" cy="40" r="3" /></> : type === 'obstacle-robot' ? <><circle cx="33" cy="31" r="16" /><circle cx="33" cy="31" r="10" /><circle cx="33" cy="31" r="3" /><path d="M33 15v32M17 31h32M26 44 13 62h16l15-20 14 12 12-22-6-4-14 17M11 64h60" /><circle cx="58" cy="54" r="3" /><path d="M8 38c11-31 43-35 61-18" strokeDasharray="2 4" /></> : <><path d="m14 52 20-10 33 10-23 12zM14 52v8l30 12 23-13v-7M44 64v8M35 45V26l7-4 6 4v23M35 26l7 4 6-4M42 30v18M42 22l12-8 16 9-6 5-10-6-8 5M70 23v14l-6 4-5-4V27M64 41v6l-7 5m7-5 7 4" /><ellipse cx="24" cy="63" rx="4" ry="6" /><ellipse cx="57" cy="64" rx="4" ry="6" /></>}
+  </svg>;
+}
+
 function Works() {
+  const [active, setActive] = useState(0);
+  const tabs = useRef([]);
+  const panels = useRef([]);
+  const shortNames = ['扑翼飞行器', '越障机器人', '搬运机器人'];
+  const titleLines = [['仿生蝴蝶', '飞行器设计'], ['仿生越障机器人', '设计与仿真'], ['移动物料搬运', '机器人设计']];
+  useLayoutEffect(() => {
+    const mm = gsap.matchMedia();
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.timeline()
+        .fromTo('.showcase-art', { opacity: 0, x: 55, clipPath: 'inset(0 0 0 18%)' }, { opacity: 1, x: 0, clipPath: 'inset(0 0 0 0%)', duration: .75, ease: 'power3.out' })
+        .fromTo('.showcase-copy > *', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .45, stagger: .055, ease: 'power2.out' }, .14);
+    }, panels.current[active]);
+    return () => mm.revert();
+  }, [active]);
+  function onTabKey(event, index) {
+    let next;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = (index + 1) % projects.length;
+    else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = (index + projects.length - 1) % projects.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = projects.length - 1;
+    if (next !== undefined) { event.preventDefault(); setActive(next); tabs.current[next]?.focus(); }
+  }
   return <section id="works" className="works section-space shell">
-    <div className="section-head" data-reveal><SectionLabel number="02" english="SELECTED WORK">作品集目录</SectionLabel><div className="section-heading-row"><h2>把思考，<br /><span className="muted">做成看得见的作品。</span></h2><p>三项工程实践。<br />从机构设计、仿真优化，到样机开发。</p></div></div>
-    <div className="project-grid">{projects.map(p => <a key={p.slug} className={`project-card project-${p.number}`} href={`/projects/${p.slug}.html`} data-reveal aria-label={`查看${p.title}`}>
-      <div className="project-card-media"><ImagePanel src={p.cover} alt={p.coverAlt} code={`P${p.number} / ${p.english}`} type={p.slug} title="项目封面 · 待补充实际作品图片" /><span className="project-open"><Arrow /></span></div>
-      <div className="project-copy"><div className="project-kicker mono"><span>{p.number} / {p.english}</span><span>{p.period}</span></div><h3>{p.title}</h3><p>{p.description}</p><div className="project-card-meta"><span>{p.subtitle}</span><span>{p.role}</span></div></div>
-    </a>)}</div>
+    <div className="section-head" data-reveal><SectionLabel number="02" english="SELECTED WORK">作品集目录</SectionLabel><div className="section-heading-row"><h2>把思考，<br /><span className="muted">做成看得见的作品。</span></h2><p>选择左侧项目，探索工程实践。<br />从机构设计、仿真优化，到样机开发。</p></div></div>
+    <div className="project-showcase" data-reveal>
+      <div className="project-rail"><span className="rail-heading mono">PROJECTS<br />01 — 03</span><div className="project-tabs" role="tablist" aria-label="选择工程项目" aria-orientation="vertical">
+        {projects.map((p, i) => <button key={p.slug} ref={el => { tabs.current[i] = el; }} id={`work-tab-${p.slug}`} type="button" role="tab" aria-selected={active === i} aria-controls={`work-panel-${p.slug}`} aria-label={p.title} tabIndex={active === i ? 0 : -1} onClick={() => setActive(i)} onKeyDown={e => onTabKey(e, i)} className={`project-tab ${active === i ? 'is-active' : ''}`}><span className="project-tab-icon"><ProjectIcon type={p.slug} /><span className="project-tab-number mono">{p.number}</span></span><span className="project-tab-label">{shortNames[i]}</span></button>)}
+      </div><span className="rail-count mono">0{active + 1} / 03</span></div>
+      <div className="project-stage">
+        {projects.map((p, i) => <div key={p.slug} ref={el => { panels.current[i] = el; }} id={`work-panel-${p.slug}`} role="tabpanel" aria-labelledby={`work-tab-${p.slug}`} tabIndex={0} hidden={active !== i} className={`showcase-panel showcase-${p.number}`}>
+          <span className="showcase-watermark" aria-hidden="true">{p.number}</span><span className="showcase-register mono">ENGINEERING ARCHIVE / P{p.number}</span>
+          <figure className="showcase-art">{p.cover ? <img src={p.cover} alt={p.coverAlt} loading="lazy" decoding="async" /> : <><TechnicalDrawing type={p.slug} /><figcaption>项目大图预留 / 线稿示意<span className="mono">P{p.number} · IMAGE TO FOLLOW</span></figcaption></>}</figure>
+          <div className="showcase-copy"><div className="showcase-kicker mono"><span className="signal-dot" />{p.english}</div><h3 aria-label={p.title}>{titleLines[i][0]}<br />{titleLines[i][1]}</h3><div className="showcase-meta"><span>{p.role}</span><span>{p.period}</span></div><p className="showcase-description">{p.description}</p><p className="showcase-topics">{p.subtitle}</p><dl className="showcase-metrics"><div><dt>{p.metricLabel}</dt><dd>{p.metric}</dd></div><div><dt>{p.secondMetricLabel}</dt><dd>{p.secondMetric}</dd></div></dl><a className="showcase-detail" href={`/projects/${p.slug}.html`}>查看项目详情 <Arrow /></a></div>
+        </div>)}
+      </div>
+    </div>
+    <p className="showcase-hint"><span className="mono">INTERACTIVE INDEX</span> 点击线稿图标切换项目 · 大图与过程材料待补充</p>
   </section>;
 }
 
