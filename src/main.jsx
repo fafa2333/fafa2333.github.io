@@ -178,15 +178,6 @@ function App() {
   const slug = window.location.pathname.split('/').pop()?.replace('.html', '');
   const project = projects.find(p => p.slug === slug);
   useEffect(() => {
-    // React renders after the document's first anchor lookup. Restore direct links
-    // such as /index.html#works once the section exists.
-    const frame = requestAnimationFrame(() => {
-      const hash = window.location.hash.slice(1);
-      if (hash) document.getElementById(hash)?.scrollIntoView({ behavior: 'instant', block: 'start' });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, []);
-  useEffect(() => {
     const mm = gsap.matchMedia();
     mm.add('(prefers-reduced-motion: no-preference)', () => {
       if (!project) gsap.from('.hero-title-group', { y: 28, opacity: 0, duration: 1, ease: 'power3.out', delay: .12 });
@@ -203,7 +194,26 @@ function App() {
     magnets.forEach(el => { el.addEventListener('pointermove', move); el.addEventListener('pointerleave', leave); });
     return () => { mm.revert(); magnets.forEach(el => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerleave', leave); }); };
   }, [project]);
-  return <div ref={app}><a className="skip-link" href="#main">跳到主要内容</a><Header project={project} /><main id="main">{project ? <ProjectPage project={project} /> : <><Hero /><Works /><Skills /><Education /></>}</main><Contact /></div>;
+  useEffect(() => {
+    // Restore direct anchors after animation measurements and browser scroll
+    // restoration, so refreshed section links land at the chapter's top.
+    let frame;
+    const restoreAnchor = () => {
+      frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => {
+          const target = document.getElementById(window.location.hash.slice(1));
+          if (target) {
+            ScrollTrigger.refresh();
+            target.scrollIntoView({ behavior: 'instant', block: 'start' });
+          }
+        });
+      });
+    };
+    if (document.readyState === 'complete') restoreAnchor();
+    else window.addEventListener('load', restoreAnchor, { once: true });
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('load', restoreAnchor); };
+  }, []);
+  return <div ref={app} className={project ? 'project-page' : 'home-page'}><a className="skip-link" href="#main">跳到主要内容</a><Header project={project} /><main id="main">{project ? <ProjectPage project={project} /> : <><Hero /><Works /><Skills /><Education /></>}</main><Contact /></div>;
 }
 
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);

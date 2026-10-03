@@ -371,6 +371,85 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .school h3 { font-size: 17px; }
   .contact-email a { font-size: 22px; }
 }
+/* Desktop home chapters each occupy the viewport, including room for the fixed header.
+   Flex/grid distribute the remaining height; no clipping or whole-page scaling. */
+@media (min-width: 1000px) and (min-height: 560px) {
+  html:has(.home-page) { scroll-padding-top: 0; }
+  .home-page { --chapter-top: calc(76px + clamp(14px, 2.5svh, 30px)); --chapter-bottom: clamp(18px, 3svh, 36px); }
+  .home-page .site-header { height: 96px; }
+  .home-page .site-header.is-scrolled { height: 76px; padding-block: 14px; }
+  .home-page :is(.works, .skills-section, .education) { height: 100svh; min-height: 0; padding-block: var(--chapter-top) var(--chapter-bottom); display: flex; flex-direction: column; }
+  .home-page .section-head { flex-shrink: 0; margin-bottom: clamp(14px, 2.5svh, 28px); }
+  .home-page .section-heading-row { margin-top: clamp(12px, 2svh, 24px); }
+  .home-page .section-heading-row h2 { font-size: clamp(26px, 4.4svh, 48px); line-height: 1.2; }
+  .home-page .section-heading-row > p { font-size: 12px; line-height: 1.8; padding-bottom: 0; }
+
+  .home-page .hero { min-height: 0; }
+  .home-page .hero-content { padding-top: clamp(100px, 15svh, 150px); padding-bottom: clamp(46px, 8svh, 85px); }
+  .home-page .hero h1 { font-size: clamp(96px, min(14.7vw, 24svh), 244px); }
+  .home-page .hero-overline { margin-bottom: clamp(16px, 3svh, 36px); }
+  .home-page .hero-statement { font-size: clamp(20px, 3.7svh, 36px); line-height: 1.5; margin-top: 10px; }
+  .home-page .hero-bottom { margin-top: clamp(18px, 3.5svh, 45px); }
+  .home-page .hero-intro p { font-size: 12px; line-height: 1.8; }
+  .home-page .hero-intro a { margin-top: 12px; }
+
+  .home-page .project-showcase { flex: 1; min-height: 0; grid-template-columns: 110px minmax(0, 1fr); gap: 28px; }
+  .home-page .project-stage { min-height: 0; }
+  .home-page .showcase-panel { min-height: 0; height: 100%; }
+  .home-page .project-rail { min-height: 0; padding-block: 8px; }
+  .home-page .rail-heading { font-size: 8px; line-height: 1.5; margin-bottom: 12px; }
+  .home-page .project-tabs { gap: clamp(10px, 1.8svh, 22px); }
+  .home-page .project-tab { width: 96px; gap: 6px; padding: 4px; }
+  .home-page .project-tab-icon { width: clamp(51px, 9svh, 80px); height: clamp(51px, 9svh, 80px); }
+  .home-page .project-tab-icon img { width: 86%; height: 86%; }
+  .home-page .project-tab-label { font-size: 9px; }
+  .home-page .rail-count { margin-top: 12px; font-size: 8px; }
+  .home-page .showcase-register { top: 18px; }
+  .home-page .showcase-watermark { top: 35px; font-size: clamp(100px, 19svh, 200px); }
+  .home-page .showcase-copy { top: 50%; transform: translateY(-50%); padding-block: 0; width: 44%; display: grid; grid-template-columns: 1fr auto; gap: 0 18px; }
+  .home-page .showcase-copy > * { grid-column: 1 / -1; }
+  .home-page .showcase-copy h3 { font-size: clamp(23px, 4svh, 42px); line-height: 1.2; margin-block: 12px; }
+  .home-page .showcase-meta { padding-bottom: 10px; margin-bottom: 12px; }
+  .home-page .showcase-description { font-size: 12px; line-height: 1.8; }
+  .home-page .showcase-topics { margin-top: 8px; font-size: 9px; }
+  .home-page .showcase-metrics { grid-column: 1; gap: 22px; margin-block: 16px 0; }
+  .home-page .showcase-metrics dd { font-size: clamp(21px, 3.4svh, 29px); }
+  .home-page .showcase-metrics > div { gap: 5px; }
+  .home-page .showcase-detail { grid-column: 2; align-self: end; justify-self: end; margin-top: 16px; padding: 11px 13px; gap: 16px; font-size: 11px; }
+  .home-page .showcase-art figcaption { bottom: 6%; }
+  .home-page .showcase-hint { flex-shrink: 0; margin-top: 12px; font-size: 9px; }
+
+  .home-page .skills-section > .shell { height: 100%; display: flex; flex-direction: column; }
+  .home-page .skills-grid { flex: 1; min-height: 0; grid-template-columns: repeat(4, minmax(0,1fr)); }
+  .home-page .skill-card { min-height: 0; display: flex; flex-direction: column; padding: clamp(22px, 3svh, 38px); }
+  .home-page .skill-top { margin-bottom: auto; padding-bottom: 30px; }
+  .home-page .skill-card h3 { font-size: clamp(17px, 1.6vw, 23px); }
+  .home-page .skill-card li { font-size: 11px; }
+
+  .home-page .education-layout { flex: 1; min-height: 0; align-items: stretch; gap: clamp(35px, 4vw, 70px); }
+  .home-page .education-image { min-height: 0; height: 100%; margin-top: 0; }
+  .home-page .education-image .image-panel { min-height: 0; height: calc(100% - 28px); aspect-ratio: auto; }
+  .home-page .education-image figcaption { margin-top: 10px; }
+  .home-page .education-timeline { min-height: 0; display: grid; grid-template-rows: 1fr 1fr; gap: clamp(14px, 2svh, 25px); }
+  .home-page .education-entry { min-height: 0; margin-bottom: 0; padding: clamp(16px, 2.5svh, 28px); display: flex; flex-direction: column; justify-content: center; }
+  .home-page .education-top { margin-bottom: clamp(12px, 2svh, 22px); }
+  .home-page .education-entry:before { top: 28px; }
+  .home-page .school h3 { font-size: clamp(19px, 2.8svh, 26px); }
+  .home-page .bilingual [lang=en] { font-size: 12px; }
+  .home-page .major { margin-top: 12px; font-size: 13px; }
+  .home-page .major [lang=en] { font-size: 11px; }
+
+  .home-page .contact { height: 100svh; padding-block: var(--chapter-top) var(--chapter-bottom); }
+  .home-page .contact > .shell { height: 100%; display: flex; flex-direction: column; }
+  .home-page .contact .shell > [data-reveal] { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .home-page .contact-heading { flex: 1; margin-block: 22px; }
+  .home-page .contact h2 { font-size: clamp(36px, min(6.6vw, 9svh), 105px); }
+  .home-page .contact-bottom { flex-shrink: 0; padding-top: 22px; }
+  .home-page .contact-email { gap: 9px; }
+  .home-page .contact-email a { font-size: clamp(22px, 3.7svh, 38px); }
+  .home-page .footer-line { flex-shrink: 0; padding-block: 24px 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *:before, *:after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
