@@ -24,7 +24,7 @@ function Header({ project }) {
     return () => { window.removeEventListener('scroll', scroll); window.removeEventListener('keydown', key); };
   }, []);
   return <header className={`site-header ${scrolled ? 'is-scrolled' : ''} ${open ? 'menu-open' : ''}`}>
-    <a className="brand" href={project ? '/index.html' : '#profile'} aria-label="李玉夫作品集首页"><span className="brand-mark">LY.</span><span>LI YUFU<span className="brand-sub">机械设计 / 智能制造</span></span></a>
+    <a className="brand" href={project ? '/index.html' : '#profile'} aria-label="李玉夫作品集首页"><span className="brand-mark">LI.</span><span>LI YUFU<span className="brand-sub">机械设计 / 智能制造</span></span></a>
     <button ref={button} className="menu-toggle" type="button" aria-expanded={open} aria-controls="main-nav" onClick={() => setOpen(!open)}>{open ? '关闭' : '菜单'}<span>{open ? '−' : '+'}</span></button>
     <nav id="main-nav" aria-label="主要导航" className={open ? 'is-open' : ''}>
       {links.map(([id, title], i) => <a key={id} href={`#${id}`} onClick={() => setOpen(false)}><span className="nav-number">0{i + (project ? 1 : 2)}</span>{title}</a>)}
