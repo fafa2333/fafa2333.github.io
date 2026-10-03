@@ -163,7 +163,7 @@ function Contact() {
     try { await navigator.clipboard.writeText(email); setCopied(true); clearTimeout(timer.current); timer.current = setTimeout(() => setCopied(false), 2200); }
     catch { window.location.href = `mailto:${email}`; }
   }
-  return <footer id="contact" className="contact"><div className="shell"><div data-reveal><SectionLabel number="05" english="GET IN TOUCH">保持联系</SectionLabel><div className="contact-heading"><h2>下一个想法，<br />一起让它发生<span className="accent-text">。</span></h2><a className="contact-orbit magnetic" href={`mailto:${email}`} aria-label="发送邮件联系李玉夫"><Arrow /></a></div></div><div className="contact-bottom"><div className="contact-email"><span className="mono">EMAIL / 联系邮箱</span><a href={`mailto:${email}`}>{email}</a><button onClick={copy} type="button" aria-live="polite">{copied ? '已复制 ✓' : '复制邮箱 ↗'}</button></div><div className="contact-links"><a href="https://github.com/fafa2333" target="_blank" rel="noopener noreferrer">GitHub <Arrow /></a><a href="#main">返回顶部 ↑</a></div></div><div className="footer-line mono"><span>© {new Date().getFullYear()} LI YUFU</span><span>DESIGN. SIMULATE. MAKE.</span><span>个人作品集</span></div></div></footer>;
+  return <footer id="contact" className="contact"><div className="shell"><div data-reveal><div className="contact-heading"><h2>下一个想法，<br />一起让它发生<span className="accent-text">。</span></h2><a className="contact-orbit magnetic" href={`mailto:${email}`} aria-label="发送邮件联系李玉夫"><Arrow /></a></div></div><div className="contact-bottom"><div className="contact-email"><span className="mono">EMAIL / 联系邮箱</span><a href={`mailto:${email}`}>{email}</a><button onClick={copy} type="button" aria-live="polite">{copied ? '已复制 ✓' : '复制邮箱 ↗'}</button></div><div className="contact-links"><a href="https://github.com/fafa2333" target="_blank" rel="noopener noreferrer">GitHub <Arrow /></a><a href="#main">返回顶部 ↑</a></div></div><div className="footer-line mono"><span>© {new Date().getFullYear()} LI YUFU</span><span>DESIGN. SIMULATE. MAKE.</span><span>个人作品集</span></div></div></footer>;
 }
 
 function ProjectPage({ project: p }) {
@@ -213,7 +213,7 @@ function App() {
     else window.addEventListener('load', restoreAnchor, { once: true });
     return () => { cancelAnimationFrame(frame); window.removeEventListener('load', restoreAnchor); };
   }, []);
-  return <div ref={app} className={project ? 'project-page' : 'home-page'}><a className="skip-link" href="#main">跳到主要内容</a><Header project={project} /><main id="main">{project ? <ProjectPage project={project} /> : <><Hero /><Works /><Skills /><Education /></>}</main><Contact /></div>;
+  return <div ref={app} className={project ? 'project-page' : 'home-page'}><a className="skip-link" href="#main">跳到主要内容</a><Header project={project} /><main id="main">{project ? <ProjectPage project={project} /> : <><Hero /><Works /><Skills /><div className="education-contact"><Education /><Contact /></div></>}</main>{project && <Contact />}</div>;
 }
 
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);

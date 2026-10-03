@@ -426,28 +426,34 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .home-page .skill-card h3 { font-size: clamp(17px, 1.6vw, 23px); }
   .home-page .skill-card li { font-size: 11px; }
 
+  .home-page .education-contact { height: 100svh; display: flex; flex-direction: column; }
+  .home-page .education { flex: 1; min-height: 0; height: auto; padding-bottom: clamp(16px, 2.5svh, 28px); }
+  .home-page .education .section-heading-row h2 br { display: none; }
+  .home-page .education .section-heading-row h2 .muted { margin-left: .25em; }
   .home-page .education-layout { flex: 1; min-height: 0; align-items: stretch; gap: clamp(35px, 4vw, 70px); }
   .home-page .education-image { min-height: 0; height: 100%; margin-top: 0; }
   .home-page .education-image .image-panel { min-height: 0; height: calc(100% - 28px); aspect-ratio: auto; }
   .home-page .education-image figcaption { margin-top: 10px; }
-  .home-page .education-timeline { min-height: 0; display: grid; grid-template-rows: 1fr 1fr; gap: clamp(14px, 2svh, 25px); }
-  .home-page .education-entry { min-height: 0; margin-bottom: 0; padding: clamp(16px, 2.5svh, 28px); display: flex; flex-direction: column; justify-content: center; }
-  .home-page .education-top { margin-bottom: clamp(12px, 2svh, 22px); }
+  .home-page .education-timeline { min-height: 0; display: grid; grid-template-rows: 1fr 1fr; gap: clamp(10px, 1.5svh, 18px); }
+  .home-page .education-entry { min-height: 0; margin-bottom: 0; padding: clamp(12px, 2svh, 24px); display: flex; flex-direction: column; justify-content: center; }
+  .home-page .education-top { margin-bottom: clamp(8px, 1.4svh, 16px); }
   .home-page .education-entry:before { top: 28px; }
-  .home-page .school h3 { font-size: clamp(19px, 2.8svh, 26px); }
-  .home-page .bilingual [lang=en] { font-size: 12px; }
-  .home-page .major { margin-top: 12px; font-size: 13px; }
+  .home-page .school h3 { font-size: clamp(18px, 2.8svh, 26px); }
+  .home-page .bilingual [lang=en] { font-size: 11px; }
+  .home-page .major { margin-top: 8px; font-size: 12px; }
   .home-page .major [lang=en] { font-size: 11px; }
 
-  .home-page .contact { height: 100svh; padding-block: var(--chapter-top) var(--chapter-bottom); }
-  .home-page .contact > .shell { height: 100%; display: flex; flex-direction: column; }
-  .home-page .contact .shell > [data-reveal] { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  .home-page .contact-heading { flex: 1; margin-block: 22px; }
-  .home-page .contact h2 { font-size: clamp(36px, min(6.6vw, 9svh), 105px); }
-  .home-page .contact-bottom { flex-shrink: 0; padding-top: 22px; }
-  .home-page .contact-email { gap: 9px; }
-  .home-page .contact-email a { font-size: clamp(22px, 3.7svh, 38px); }
-  .home-page .footer-line { flex-shrink: 0; padding-block: 24px 0; }
+  .home-page .contact { flex-shrink: 0; height: clamp(158px, 25svh, 230px); padding-block: clamp(16px, 2.5svh, 26px); }
+  .home-page .contact > .shell { height: 100%; display: grid; grid-template-columns: .95fr 1.05fr; grid-template-rows: 1fr auto; gap: 12px 60px; }
+  .home-page .contact-heading { margin: 0; height: 100%; gap: 24px; }
+  .home-page .contact h2 { font-size: clamp(25px, 4.2svh, 43px); }
+  .home-page .contact-orbit { width: clamp(48px, 8svh, 76px); }
+  .home-page .contact-bottom { border: 0; padding: 0; gap: 20px; align-items: center; }
+  .home-page .contact-email { gap: 5px; }
+  .home-page .contact-email a { font-size: clamp(20px, 3.2svh, 30px); }
+  .home-page .contact-email button { padding-block: 4px; }
+  .home-page .contact-links { flex-direction: column; gap: 12px; white-space: nowrap; }
+  .home-page .footer-line { grid-column: 1 / -1; padding: 12px 0 0; border-top: 1px solid #4b5142; font-size: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
