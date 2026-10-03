@@ -68,6 +68,10 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .signal-dot { width: 8px; height: 8px; background: var(--accent); border: 1px solid rgba(37,39,36,.2); border-radius: 50%; flex-shrink: 0; }
 .hero-name-cn { font-size: 14px; letter-spacing: .15em; }
 .hero h1 { font-size: clamp(100px, 14.7vw, 244px); line-height: 1.08; letter-spacing: -.065em; font-weight: 550; margin-left: -.06em; white-space: nowrap; }
+.hero-wordmark { position: relative; display: inline-block; }
+.hero-wordmark-fallback { display: inline-block; }
+.hero-wordmark:has(.tech-text[data-ready="true"]) .hero-wordmark-fallback { opacity: 0; }
+.hero-wordmark .tech-text { position: absolute; inset: -24px; width: auto; height: auto; z-index: 1; }
 .title-period { color: #656b60; }
 .hero-statement { font-size: clamp(20px, 2.4vw, 36px); line-height: 1.65; letter-spacing: -.02em; margin-top: 14px; }
 .hero-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: clamp(35px, 6vh, 90px); align-items: end; }

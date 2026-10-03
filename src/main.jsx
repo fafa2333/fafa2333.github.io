@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import projects from './projects.json';
 import { media } from './media';
+import TechText from './components/TechText';
 import './styles.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -59,20 +60,29 @@ function Hero() {
   useEffect(() => {
     if (!video.current) return;
     let cancelled = false;
-    if (paused || !visible) video.current.pause();
+    if (paused || !visible || failed) video.current.pause();
     else video.current.play().catch(error => {
       if (!cancelled && error.name !== 'AbortError') setPaused(true);
     });
     return () => { cancelled = true; };
-  }, [paused, visible]);
+  }, [paused, visible, failed]);
   return <section id="profile" className="hero" aria-labelledby="hero-title">
     <div className="hero-background" aria-hidden="true"><video ref={video} muted loop playsInline preload="metadata" poster={media.heroPoster} onError={() => setFailed(true)}>{media.heroVideo && <source src={media.heroVideo} type="video/mp4" />}</video><div className="hero-wash" /></div>
     <div className="hero-content shell">
       <div className="hero-overline"><span className="signal-dot" /><span>MECHANICAL DESIGN × SMART MANUFACTURING</span></div>
-      <div className="hero-title-group"><span className="hero-name-cn">李玉夫 / 工程作品集</span><h1 id="hero-title"><span>LI YUFU</span><span className="title-period">.</span></h1><p className="hero-statement">从想法，到结构。<br />让设计在真实世界中得到验证。</p></div>
+      <div className="hero-title-group">
+        <span className="hero-name-cn">李玉夫 / 工程作品集</span>
+        <h1 id="hero-title"><span className="hero-wordmark">
+          <span className="hero-wordmark-fallback">LI YUFU</span>
+          <TechText text="LI YUFU" layout="inline" fontSize="inherit" fontWeight={550} letterSpacing={-.065}
+            color="#252724" accentColor="#69705f" reveal="letter" lineStyle="solid" strokeWidth={1.3}
+            specks={6} speed={.7} paused={paused} ariaHidden />
+        </span><span className="title-period">.</span></h1>
+        <p className="hero-statement">从想法，到结构。<br />让设计在真实世界中得到验证。</p>
+      </div>
       <div className="hero-bottom"><a className="hero-scroll" href="#works"><span className="circle-button"><Arrow diagonal={false} /></span><span>探索作品<span className="mono">SCROLL TO EXPLORE</span></span></a><div className="hero-intro"><p>{intro}</p><a href={`mailto:${email}`}>{email}<Arrow /></a></div></div>
     </div>
-    <div className="hero-video-caption"><span className="mono">{media.heroIsPlaceholder ? 'V01 / 齿轮啮合 · 工程线稿动效' : 'V01 / MOTION STUDY'}</span>{!failed && <button type="button" onClick={() => setPaused(!paused)} aria-label={paused ? '播放背景视频' : '暂停背景视频'}>{paused ? '播放' : '暂停'} <span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span></button>}</div>
+    <div className="hero-video-caption"><span className="mono">{media.heroIsPlaceholder ? 'V01 / 齿轮啮合 · 工程线稿动效' : 'V01 / MOTION STUDY'}</span><button type="button" onClick={() => setPaused(!paused)} aria-label={paused ? '播放首页动效' : '暂停首页动效'}>{paused ? '播放' : '暂停'} <span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span></button></div>
   </section>;
 }
 
