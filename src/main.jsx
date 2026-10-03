@@ -86,11 +86,9 @@ function ImagePanel({ src, alt, code, type, className = '', title }) {
   </div>;
 }
 
-// Dedicated, compact line icons: flapping wings, flywheel linkage and mobile arm.
+// User-supplied line icons; accessible names live on their project tabs.
 function ProjectIcon({ type }) {
-  return <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    {type === 'butterfly' ? <><path d="M37 36C26 13 9 16 11 29c1 12 16 17 26 13M43 36C54 13 71 16 69 29c-1 12-16 17-26 13M36 44c-14-4-28 4-21 13s19 4 23-10M44 44c14-4 28 4 21 13s-19 4-23-10M37 29h6l3 18-6 12-6-12zM13 24l23 16M67 24 44 40M18 55l18-11M62 55 44 44" /><circle cx="40" cy="40" r="3" /></> : type === 'obstacle-robot' ? <><circle cx="33" cy="31" r="16" /><circle cx="33" cy="31" r="10" /><circle cx="33" cy="31" r="3" /><path d="M33 15v32M17 31h32M26 44 13 62h16l15-20 14 12 12-22-6-4-14 17M11 64h60" /><circle cx="58" cy="54" r="3" /><path d="M8 38c11-31 43-35 61-18" strokeDasharray="2 4" /></> : <><path d="m14 52 20-10 33 10-23 12zM14 52v8l30 12 23-13v-7M44 64v8M35 45V26l7-4 6 4v23M35 26l7 4 6-4M42 30v18M42 22l12-8 16 9-6 5-10-6-8 5M70 23v14l-6 4-5-4V27M64 41v6l-7 5m7-5 7 4" /><ellipse cx="24" cy="63" rx="4" ry="6" /><ellipse cx="57" cy="64" rx="4" ry="6" /></>}
-  </svg>;
+  return <img src={`/media/project-icons/${type}.png`} alt="" width="1254" height="1254" loading="lazy" decoding="async" />;
 }
 
 function Works() {

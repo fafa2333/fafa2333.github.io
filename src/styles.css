@@ -99,7 +99,7 @@ h2 { font-size: clamp(30px, 3.8vw, 58px); line-height: 1.35; letter-spacing: -.0
 .project-tabs:before { content: ''; position: absolute; width: 1px; top: 35px; bottom: 35px; left: 50%; background: #d7dcd0; }
 .project-tab { position: relative; display: flex; flex-direction: column; align-items: center; padding: 4px 8px; background: transparent; width: 112px; gap: 12px; }
 .project-tab-icon { position: relative; display: grid; place-items: center; width: 84px; height: 84px; border-radius: 50%; background: #fafbf7; border: 1px solid #cfd4c6; outline: 3px solid transparent; outline-offset: 4px; box-shadow: 0 3px 10px #2527240b; color: #78816b; transition: outline-color .25s, color .25s, background .25s, transform .25s; }
-.project-tab-icon svg { width: 64px; height: 64px; }
+.project-tab-icon img { width: 72px; height: 72px; object-fit: contain; mix-blend-mode: multiply; display: block; }
 .project-tab-number { position: absolute; right: -4px; bottom: 1px; background: #e7eae0; color: #69725d; border-radius: 50%; width: 22px; height: 22px; font-size: 9px; display: grid; place-items: center; }
 .project-tab-label { font-size: 10px; color: #7a836b; background: var(--paper); padding-inline: 4px; }
 .project-tab:hover .project-tab-icon { color: #333d28; transform: translateY(-2px); }
@@ -229,7 +229,7 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .project-showcase { grid-template-columns: 105px minmax(0,1fr); gap: 22px; }
   .project-tab { width: 96px; }
   .project-tab-icon { width: 72px; height: 72px; }
-  .project-tab-icon svg { width: 58px; height: 58px; }
+  .project-tab-icon img { width: 62px; height: 62px; }
   .showcase-copy { width: 47%; padding-top: 175px; }
   .showcase-copy h3 { font-size: 29px; }
   .showcase-art { right: -14%; width: 83%; }
@@ -252,7 +252,7 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .project-tabs { gap: 24px; }
   .project-tab { width: 65px; padding: 4px; gap: 12px; }
   .project-tab-icon { width: 47px; height: 47px; outline-width: 2px; outline-offset: 3px; }
-  .project-tab-icon svg { width: 41px; height: 41px; }
+  .project-tab-icon img { width: 42px; height: 42px; }
   .project-tab-number { width: 17px; height: 17px; font-size: 7px; right: -3px; }
   .project-tab-label { font-size: 8px; padding-inline: 0; }
   .rail-count { font-size: 8px; margin-top: 28px; }
