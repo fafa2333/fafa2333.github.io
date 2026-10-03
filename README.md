@@ -33,7 +33,9 @@ pnpm preview
 
 ## 媒体替换
 
-首屏当前使用自制的 8 秒无声齿轮啮合线稿循环视频，2880×1800、24fps、MP4 / H.264。同模数的 30 齿与 20 齿齿轮在同一投影平面内反向联动，转速比为 1:1.5，沿用浅水泥灰、灰色细线和少量黄绿色轴心，不绘制轴心十字线。视频采用高分辨率抗锯齿和较低压缩，主轮廓与后侧线条保留明暗层次；右侧视频、简介与邮箱使用一致的自适应下移量，短屏自动收紧。属于抽象工程视觉，不代表真实项目模型。视频及匹配海报为 `public/media/hero-gears.mp4` 和 `hero-gears-poster.jpg`。生成源码在 `scripts/render-hero-gears.py`，需要 Pillow 和 ffmpeg，可用 `python scripts/render-hero-gears.py --ffmpeg /path/to/ffmpeg` 重新生成；网站构建和发布不依赖这些工具。
+首屏当前使用自制的 8 秒无声齿轮啮合线稿循环视频，2880×1800、24fps、MP4 / H.264。同模数的 30 齿与 20 齿齿轮在同一投影平面内反向联动，转速比为 1:1.5，沿用浅水泥灰与灰色细线，轴心不绘制十字线或绿色点。视频采用高分辨率抗锯齿和较低压缩，主轮廓与后侧线条保留明暗层次；右侧视频、简介与邮箱使用一致的自适应下移量，短屏自动收紧。属于抽象工程视觉，不代表真实项目模型。视频及匹配海报为 `public/media/hero-gears.mp4` 和 `hero-gears-poster.jpg`。生成源码在 `scripts/render-hero-gears.py`，需要 Pillow 和 ffmpeg，可用 `python scripts/render-hero-gears.py --ffmpeg /path/to/ffmpeg` 重新生成；网站构建和发布不依赖这些工具。
+
+首屏英文专业方向使用随网站提供的 IBM Plex Mono Regular 等宽字体，并在首页预加载，避免 Windows、macOS 的默认等宽字体不同而改变外观。字体文件及 SIL Open Font License 存放在 `public/fonts/`；字体来源为 Google Fonts 的 IBM Plex Mono 拉丁字符集。
 
 支持暂停、视频失败时使用海报、减少动态效果时默认静止，以及离开首屏时暂停。可在 `src/media.js` 替换 `heroVideo`、`heroPoster`，换上自己的视频后将 `heroIsPlaceholder` 设为 `false`。建议使用压缩后的横向 MP4 / H.264，提供静态海报。
 

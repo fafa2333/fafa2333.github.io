@@ -17,7 +17,6 @@ VIDEO_WIDTH, VIDEO_HEIGHT = WIDTH * 2, HEIGHT * 2
 FPS, DURATION = 24, 8
 BACKGROUND = (217, 218, 213)
 INK = (101, 107, 96)
-ACCENT = (196, 214, 100)
 MODULE = 12
 PRESSURE_ANGLE = math.radians(20)
 OUTPUT = Path(__file__).resolve().parents[1] / 'public' / 'media'
@@ -122,9 +121,6 @@ def draw_gear(draw, gear, turn):
         window = [polar(pitch * .68, start + (end - start) * step / 24) for step in range(25)]
         window += [polar(pitch * .35, end - (end - start) * step / 24) for step in range(25)]
         line(draw, [project(x, y, center) for x, y in window], tint(.74), 1.25, True)
-    x, y = project(0, 0, center)
-    radius = 3.3 * SCALE
-    draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=ACCENT)
 
 
 def frame(index):
