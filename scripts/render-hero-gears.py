@@ -12,7 +12,8 @@ import subprocess
 from PIL import Image, ImageDraw
 
 
-WIDTH, HEIGHT, SCALE = 1440, 900, 2
+WIDTH, HEIGHT, SCALE = 1440, 900, 3
+VIDEO_WIDTH, VIDEO_HEIGHT = WIDTH * 2, HEIGHT * 2
 FPS, DURATION = 24, 8
 BACKGROUND = (217, 218, 213)
 INK = (101, 107, 96)
@@ -101,29 +102,27 @@ def draw_gear(draw, gear, turn):
     center = gear['center']
     points = rotate(gear['outline'], angle)
     # Rear face and thin extrusion edges stay lighter than the primary outline.
-    line(draw, [project(x, y, center, True) for x, y in points], tint(.27), .85, True)
+    line(draw, [project(x, y, center, True) for x, y in points], tint(.35), .95, True)
     base = pitch * math.cos(PRESSURE_ANGLE)
     tip_half = math.pi / (2 * gear['teeth']) + involute(pitch, base) - involute(pitch + MODULE, base)
     for tooth in range(gear['teeth']):
         for offset in (-tip_half, tip_half):
             x, y = polar(pitch + MODULE, angle + tooth * math.tau / gear['teeth'] + offset)
-            line(draw, [project(x, y, center, True), project(x, y, center)], tint(.31), .85)
+            line(draw, [project(x, y, center, True), project(x, y, center)], tint(.40), .95)
     circle(draw, pitch * .74, center, tint(.19), .8, rear=True)
     circle(draw, pitch * .16, center, tint(.30), .85, rear=True)
-    line(draw, [project(x, y, center) for x, y in points], tint(.82), 1.4, True)
-    circle(draw, pitch * .76, center, tint(.64), 1.3)
-    circle(draw, pitch * .28, center, tint(.69), 1.3)
-    circle(draw, pitch * .16, center, tint(.80), 1.3)
+    line(draw, [project(x, y, center) for x, y in points], tint(.90), 1.65, True)
+    circle(draw, pitch * .76, center, tint(.74), 1.45)
+    circle(draw, pitch * .28, center, tint(.78), 1.45)
+    circle(draw, pitch * .16, center, tint(.86), 1.45)
     # Spoke windows make rotation legible while keeping the drawing open and airy.
     for spoke in range(gear['spokes']):
         start = angle + spoke * math.tau / gear['spokes'] + .18
         end = angle + (spoke + 1) * math.tau / gear['spokes'] - .18
         window = [polar(pitch * .68, start + (end - start) * step / 24) for step in range(25)]
         window += [polar(pitch * .35, end - (end - start) * step / 24) for step in range(25)]
-        line(draw, [project(x, y, center) for x, y in window], tint(.64), 1.1, True)
+        line(draw, [project(x, y, center) for x, y in window], tint(.74), 1.25, True)
     x, y = project(0, 0, center)
-    line(draw, [(x - 14 * SCALE, y), (x + 14 * SCALE, y)], tint(.33), .7)
-    line(draw, [(x, y - 14 * SCALE), (x, y + 14 * SCALE)], tint(.33), .7)
     radius = 3.3 * SCALE
     draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=ACCENT)
 
@@ -137,7 +136,7 @@ def frame(index):
     turn = math.pi / 3 * index / (FPS * DURATION)
     for gear in GEARS:
         draw_gear(draw, gear, turn)
-    return image.resize((WIDTH, HEIGHT), Image.Resampling.LANCZOS)
+    return image.resize((VIDEO_WIDTH, VIDEO_HEIGHT), Image.Resampling.LANCZOS)
 
 
 def main():
@@ -150,8 +149,8 @@ def main():
     if args.poster_only:
         return
     command = [args.ffmpeg, '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24',
-               '-s', f'{WIDTH}x{HEIGHT}', '-r', str(FPS), '-i', '-', '-an', '-c:v', 'libx264',
-               '-preset', 'slow', '-crf', '22', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+               '-s', f'{VIDEO_WIDTH}x{VIDEO_HEIGHT}', '-r', str(FPS), '-i', '-', '-an', '-c:v', 'libx264',
+               '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
                str(OUTPUT / 'hero-gears.mp4')]
     encoder = subprocess.Popen(command, stdin=subprocess.PIPE)
     try:

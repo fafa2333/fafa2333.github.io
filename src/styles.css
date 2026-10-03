@@ -51,9 +51,9 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .menu-toggle { display: none; }
 
 /* V01: full-screen video, with a static poster and independent readable overlay. */
-.hero { min-height: 700px; height: 100svh; position: relative; overflow: hidden; background: var(--cement); }
-.hero-background { position: absolute; inset: -5% 0; }
-.hero-background video { width: 100%; height: 100%; display: block; object-fit: cover; }
+.hero { --hero-right-shift: clamp(14px, 2svh, 20px); min-height: 700px; height: 100svh; position: relative; overflow: hidden; background: var(--cement); }
+.hero-background { position: absolute; inset: -5% 0; background: #d7d8d3; }
+.hero-background video { width: 100%; height: 100%; display: block; object-fit: cover; transform: translateY(var(--hero-right-shift)); }
 .hero-wash { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(217,218,213,.95), rgba(217,218,213,.75) 35%, rgba(217,218,213,.02) 80%), linear-gradient(0deg, rgba(217,218,213,.96), transparent 48%); }
 .hero-content { height: 100%; position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; padding-top: 145px; padding-bottom: 80px; }
 .hero-overline { display: flex; gap: 12px; align-items: center; font-family: monospace; font-size: 10px; letter-spacing: .12em; margin-bottom: 40px; }
@@ -68,7 +68,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .circle-button { width: 55px; height: 55px; background: var(--accent); display: grid; place-items: center; border-radius: 50%; transition: transform .3s; }
 .circle-button svg { width: 22px; transform: rotate(90deg); }
 .hero-scroll:hover .circle-button { transform: translateY(5px); }
-.hero-intro { max-width: 490px; justify-self: end; }
+.hero-intro { max-width: 490px; justify-self: end; position: relative; top: var(--hero-right-shift); }
 .hero-intro p { font-size: 13px; line-height: 1.95; color: #4e5548; }
 .hero-intro a { display: inline-flex; gap: 18px; align-items: center; margin-top: 20px; border-bottom: 1px solid #9b9f94; padding-bottom: 7px; font-size: 14px; }
 .hero-intro svg { width: 15px; }
@@ -371,6 +371,10 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .school h3 { font-size: 17px; }
   .contact-email a { font-size: 22px; }
 }
+@media (min-width: 761px) {
+  .home-page .hero { --hero-right-shift: clamp(20px, calc((100svh - 520px) * .3), 72px); }
+}
+
 /* Desktop home chapters each occupy the viewport, including room for the fixed header.
    Flex/grid distribute the remaining height; no clipping or whole-page scaling. */
 @media (min-width: 1000px) and (min-height: 560px) {
