@@ -33,7 +33,9 @@ pnpm preview
 
 ## 媒体替换
 
-首屏当前使用自制的 6 秒无声工程线框背景视频，属于抽象视觉占位，不代表真实项目模型。支持暂停、视频失败时使用海报、减少动态效果时默认静止，以及离开首屏时暂停。可在 `src/media.js` 替换 `heroVideo`、`heroPoster`，换上自己的视频后将 `heroIsPlaceholder` 设为 `false`。建议使用压缩后的横向 MP4 / H.264，提供静态海报。
+首屏当前使用自制的 8 秒无声齿轮啮合线稿循环视频，1440×900、24fps、MP4 / H.264。同模数的 30 齿与 20 齿齿轮在同一投影平面内反向联动，转速比为 1:1.5，沿用浅水泥灰、灰色细线和少量黄绿色轴心。属于抽象工程视觉，不代表真实项目模型。视频及匹配海报为 `public/media/hero-gears.mp4` 和 `hero-gears-poster.jpg`。生成源码在 `scripts/render-hero-gears.py`，需要 Pillow 和 ffmpeg，可用 `python scripts/render-hero-gears.py --ffmpeg /path/to/ffmpeg` 重新生成；网站构建和发布不依赖这些工具。
+
+支持暂停、视频失败时使用海报、减少动态效果时默认静止，以及离开首屏时暂停。可在 `src/media.js` 替换 `heroVideo`、`heroPoster`，换上自己的视频后将 `heroIsPlaceholder` 设为 `false`。建议使用压缩后的横向 MP4 / H.264，提供静态海报。
 
 作品目录左侧使用用户提供的三个 PNG 线稿图标，依次为蝴蝶、四足机器人、移动机械臂，存放于 `public/media/project-icons/`，纵向排列；点击后右侧切换对应大图、名称、简介、指标及详情入口。图像显现与文字错峰入场由 GSAP 实现，支持连续快速切换、方向键及 Home / End，尊重减少动态效果偏好。大图占位属于概念示意，不是实际项目模型。
 
