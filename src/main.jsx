@@ -100,9 +100,15 @@ function Works() {
   useLayoutEffect(() => {
     const mm = gsap.matchMedia();
     mm.add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.timeline()
+      const transition = gsap.timeline({ paused: true })
         .fromTo('.showcase-art', { opacity: 0, x: 55, clipPath: 'inset(0 0 0 18%)' }, { opacity: 1, x: 0, clipPath: 'inset(0 0 0 0%)', duration: .75, ease: 'power3.out' })
         .fromTo('.showcase-copy > *', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .45, stagger: .055, ease: 'power2.out' }, .14);
+      const trigger = ScrollTrigger.create({
+        trigger: panels.current[active].closest('#works'), start: 'top 72%', end: 'bottom top',
+        onEnter: () => transition.restart(), onEnterBack: () => transition.restart(),
+        onLeave: () => transition.pause(0), onLeaveBack: () => transition.pause(0),
+      });
+      if (trigger.isActive) transition.play();
     }, panels.current[active]);
     return () => mm.revert();
   }, [active]);
@@ -179,10 +185,37 @@ function App() {
   const project = projects.find(p => p.slug === slug);
   useEffect(() => {
     const mm = gsap.matchMedia();
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      if (!project) gsap.from('.hero-title-group', { y: 28, opacity: 0, duration: 1, ease: 'power3.out', delay: .12 });
-      gsap.utils.toArray('[data-reveal]').forEach(el => gsap.from(el, { y: 30, opacity: 0, duration: .8, ease: 'power2.out', scrollTrigger: { trigger: el, start: 'top 94%', once: true } }));
-      if (!project) gsap.to('.hero-background', { yPercent: 12, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+    mm.add({ motion: '(prefers-reduced-motion: no-preference)', desktop: '(min-width: 1000px) and (min-height: 560px)' }, context => {
+      if (!context.conditions.motion) return;
+      if (project) {
+        gsap.utils.toArray('[data-reveal]').forEach(el => gsap.from(el, { y: 30, opacity: 0, duration: .8, ease: 'power2.out', scrollTrigger: { trigger: el, start: 'top 94%', once: true } }));
+        return;
+      }
+      const chapter = (selector, groups) => {
+        const section = app.current.querySelector(selector);
+        const timeline = gsap.timeline({ paused: true });
+        groups.forEach(([targets, at, y = 22, stagger = .09]) => {
+          timeline.fromTo(section.querySelectorAll(targets), { opacity: 0, y }, { opacity: 1, y: 0, duration: .7, stagger, ease: 'power3.out' }, at);
+        });
+        const trigger = ScrollTrigger.create({
+          trigger: section, start: 'top 72%', end: 'bottom top',
+          onEnter: () => timeline.restart(), onEnterBack: () => timeline.restart(),
+          onLeave: () => timeline.pause(0), onLeaveBack: () => timeline.pause(0),
+        });
+        if (trigger.isActive) timeline.play();
+      };
+      const heading = [['.section-label', 0, 12], ['.section-heading-row > *', .12]];
+      chapter('#profile', [['.hero-overline, .hero-name-cn', 0, 14], ['h1', .12, 30], ['.hero-statement', .26], ['.hero-bottom > *', .4], ['.hero-video-caption', .64, 10]]);
+      chapter('#works', [...heading, ['.rail-heading', .22, 12], ['.project-tab', .3, 16, .1], ['.project-stage', .26, 0], ['.rail-count, .showcase-hint', .62, 10]]);
+      chapter('#skills', [...heading, ['.skill-card', .28, 26, .12]]);
+      const learning = [...heading, ['.education-image', .24], ['.education-entry', .32, 22, .14]];
+      const contact = [['.contact-heading', .5], ['.contact-email, .contact-links', .64, 16], ['.footer-line', .82, 10]];
+      if (context.conditions.desktop) chapter('.education-contact', [...learning, ...contact]);
+      else {
+        chapter('#education', learning);
+        chapter('#contact', contact.map(([target, at, y]) => [target, at - .5, y]));
+      }
+      gsap.to('.hero-background', { yPercent: 12, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
     }, app);
     const magnets = [...app.current.querySelectorAll('.magnetic')];
     const move = e => {

@@ -456,6 +456,13 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .home-page .footer-line { grid-column: 1 / -1; padding: 12px 0 0; border-top: 1px solid #4b5142; font-size: 8px; }
 }
 
+/* Proximity snapping gently settles near a chapter; it never forces each scroll
+   gesture to advance a whole screen. Long mobile/detail pages scroll freely. */
+@media (min-width: 1000px) and (min-height: 560px) and (prefers-reduced-motion: no-preference) {
+  html:has(.home-page) { scroll-snap-type: y proximity; }
+  .home-page :is(.hero, .works, .skills-section, .education-contact) { scroll-snap-align: start; scroll-snap-stop: normal; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *:before, *:after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
