@@ -16,6 +16,7 @@ const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)'
 const particleSources = {
   butterfly: '/media/butterfly-silhouette.png',
   'obstacle-robot': '/media/obstacle-robot-silhouette.png',
+  'material-handling-robot': '/media/material-handling-robot-silhouette.png',
 };
 const particlePreload = Object.values(particleSources);
 const Arrow = ({ diagonal = true }) => <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d={diagonal ? 'M5 19 19 5M5 5h14v14' : 'M4 12h16m-6-6 6 6-6 6'} stroke="currentColor" strokeWidth="1.5" /></svg>;
@@ -127,6 +128,9 @@ function Works() {
   const [particleLeaving, setParticleLeaving] = useState(false);
   const [pending, setPending] = useState(null);
   const transitionTimer = useRef(null);
+  const destination = useRef(null);
+  const copyMotion = useRef(null);
+  const leaving = useRef(false);
   const tabs = useRef([]);
   const panel = useRef(null);
   const p = projects[active];
@@ -134,47 +138,86 @@ function Works() {
   const retainCloud = pending !== null && Boolean(particleSources[projects[pending].slug]);
   const titleLines = [['仿生蝴蝶', '飞行器设计'], ['仿生越障机器人', '设计与仿真'], ['移动物料搬运', '机器人设计']];
   useEffect(() => {
-    const resume = () => { clearTimeout(transitionTimer.current); setParticleLeaving(false); setPending(null); };
+    const resume = () => { clearTimeout(transitionTimer.current); destination.current = null; setParticleLeaving(false); setPending(null); };
     window.addEventListener('pageshow', resume);
     return () => { clearTimeout(transitionTimer.current); window.removeEventListener('pageshow', resume); };
   }, []);
   function selectProject(next) {
-    clearTimeout(transitionTimer.current);
-    if (next === active) { setParticleLeaving(false); setPending(null); return; }
+    if (next === active) {
+      clearTimeout(transitionTimer.current); destination.current = null;
+      setParticleLeaving(false); setPending(null); return;
+    }
     if (hasParticles && !reducedMotion()) {
       setPending(next);
+      // Rapid clicks update the destination of the same cloud transition.
+      if (destination.current?.kind === 'project') { destination.current.next = next; return; }
+      clearTimeout(transitionTimer.current);
+      destination.current = { kind: 'project', next };
       setParticleLeaving(true);
       transitionTimer.current = setTimeout(() => {
-        setActive(next); setParticleLeaving(false); setPending(null);
+        const target = destination.current;
+        destination.current = null;
+        if (target?.kind === 'project') setActive(target.next);
+        setParticleLeaving(false); setPending(null);
       }, PARTICLE_EXIT_DURATION);
-    } else { setActive(next); setParticleLeaving(false); setPending(null); }
+    } else {
+      clearTimeout(transitionTimer.current); destination.current = null;
+      setActive(next); setParticleLeaving(false); setPending(null);
+    }
   }
   function openDetails(event, project) {
     if (!particleSources[project.slug] || reducedMotion() || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     clearTimeout(transitionTimer.current);
+    destination.current = { kind: 'navigation' };
     setPending(null);
     setParticleLeaving(true);
     transitionTimer.current = setTimeout(() => window.location.assign(`/projects/${project.slug}.html`), PARTICLE_EXIT_DURATION);
   }
   useLayoutEffect(() => {
     const mm = gsap.matchMedia();
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      const transition = gsap.timeline({ paused: true });
-      // Particle projects share a persistent canvas. Its own scatter/gather
-      // animation stays visible instead of being hidden by a second art reveal.
-      const artwork = panel.current.querySelectorAll(hasParticles ? '.showcase-model-overlay' : '.showcase-art');
-      if (artwork.length) transition.fromTo(artwork, { opacity: 0, x: 55, clipPath: 'inset(0 0 0 18%)' }, { opacity: 1, x: 0, clipPath: 'inset(0 0 0 0%)', duration: .75, ease: 'power3.out' });
-      transition.fromTo('.showcase-copy > *', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .45, stagger: .055, ease: 'power2.out' }, .14);
-      const trigger = ScrollTrigger.create({
-        trigger: panel.current.closest('#works'), start: 'top 72%', end: 'bottom top',
-        onEnter: () => transition.restart(), onEnterBack: () => transition.restart(),
-        onLeave: () => transition.pause(0), onLeaveBack: () => transition.pause(0),
+    mm.add('(prefers-reduced-motion: no-preference)', context => {
+      const text = () => panel.current.querySelectorAll('.showcase-copy > *, .showcase-register');
+      const artwork = () => panel.current.querySelectorAll('.showcase-model-overlay');
+      let trigger;
+      context.add('show', () => {
+        if (!trigger?.isActive) return;
+        const models = artwork();
+        gsap.killTweensOf([...text(), ...models]);
+        // Start from the current opacity. Cancelling a switch does not flash.
+        gsap.to(text(), { opacity: 1, y: 0, duration: .48, stagger: .035, ease: 'power2.out', overwrite: true });
+        if (models.length) gsap.to(models, { opacity: 1, x: 0, duration: .65, ease: 'power3.out', overwrite: true });
       });
-      if (trigger.isActive) transition.play();
+      context.add('hide', () => {
+        const models = artwork();
+        gsap.killTweensOf([...text(), ...models]);
+        gsap.to(text(), { opacity: 0, y: -10, duration: .28, stagger: .018, ease: 'power2.inOut', overwrite: true });
+        if (models.length) gsap.to(models, { opacity: 0, x: -16, duration: .3, ease: 'power2.inOut', overwrite: true });
+      });
+      context.add('reset', () => {
+        const models = artwork();
+        gsap.killTweensOf([...text(), ...models]);
+        gsap.set(text(), { opacity: 0, y: 16 });
+        if (models.length) gsap.set(models, { opacity: 0, x: 40 });
+      });
+      context.reset();
+      copyMotion.current = context;
+      trigger = ScrollTrigger.create({
+        trigger: panel.current.closest('#works'), start: 'top 72%', end: 'bottom top',
+        onEnter: () => { if (!leaving.current) context.show(); },
+        onEnterBack: () => { if (!leaving.current) context.show(); },
+        onLeave: context.reset, onLeaveBack: context.reset,
+      });
+      if (trigger.isActive) context.show();
+      return () => { copyMotion.current = null; };
     }, panel.current);
     return () => mm.revert();
-  }, [active]);
+  }, []);
+  useLayoutEffect(() => {
+    leaving.current = particleLeaving;
+    if (particleLeaving) copyMotion.current?.hide();
+    else copyMotion.current?.show();
+  }, [active, particleLeaving]);
   function onTabKey(event, index) {
     let next;
     if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = (index + 1) % projects.length;
