@@ -22,6 +22,7 @@ pnpm preview
 - `src/main.jsx`：共享导航、全屏 Hero、交互式作品目录、四项个人能力、教育时间轴、收尾联系方式与项目详情组件。
 - `src/styles.css`：响应式布局、统一排版和克制的工程视觉。
 - `src/components/TechText.jsx`、`TechText.css`：基于用户提供的 React Bits TechText 源码，负责首屏大标题的逐字轮廓、工程选框、尺寸标注、拖拽回弹与自动扫过效果。
+- `src/components/CursorGrid.jsx`、`CursorGrid.css`：基于用户提供的 React Bits CursorGrid 源码，负责首屏背景的鼠标网格余迹和轻微点击波纹。
 - `src/projects.json`：三个项目的已有内容、指标、5 个流程阶段及每页 3 组 / 6 张图片。
 - `src/media.js`：Hero 视频、海报、教育装饰图设置。
 - `index.html`、`projects/*.html`：Vite 多页面入口。保留原来的项目网址。
@@ -36,7 +37,9 @@ pnpm preview
 
 ## 媒体替换
 
-首屏当前使用自制的 8 秒无声齿轮啮合线稿循环视频，2880×1800、24fps、MP4 / H.264。同模数的 30 齿与 20 齿齿轮在同一投影平面内反向联动，转速比为 1:1.5，沿用浅水泥灰与灰色细线，轴心不绘制十字线或绿色点。视频采用高分辨率抗锯齿和较低压缩，主轮廓与后侧线条保留明暗层次；右侧视频、简介与邮箱使用一致的自适应下移量，短屏自动收紧。属于抽象工程视觉，不代表真实项目模型。视频及匹配海报为 `public/media/hero-gears.mp4` 和 `hero-gears-poster.jpg`。生成源码在 `scripts/render-hero-gears.py`，需要 Pillow 和 ffmpeg，可用 `python scripts/render-hero-gears.py --ffmpeg /path/to/ffmpeg` 重新生成；网站构建和发布不依赖这些工具。
+首屏背景使用 CursorGrid：112px 的稀疏方格、灰绿色细线、最高 26% 透明度，无常驻网格或填色。鼠标附近的单元格短暂显现后淡出，点击产生更淡的扩散波纹。网格位于视频上方、渐变遮罩和文字下方，监听首页的指针事件，不遮挡链接或标题拖拽。与首页暂停按钮联动，减少动态效果、触屏、离屏和后台页停止绘制；无交互余迹时不持续运行动画帧。
+
+首屏当前使用自制的 8 秒无声齿轮啮合线稿循环视频，2880×1800、24fps、MP4 / H.264。同模数的 30 齿与 20 齿齿轮在同一投影平面内反向联动，转速比为 1:1.5，沿用浅水泥灰与灰色细线，轴心不绘制十字线或绿色点，背景不绘制横纵轴线。视频采用高分辨率抗锯齿和较低压缩，主轮廓与后侧线条保留明暗层次；右侧视频、简介与邮箱使用一致的自适应下移量，短屏自动收紧。属于抽象工程视觉，不代表真实项目模型。视频及匹配海报为 `public/media/hero-gears.mp4` 和 `hero-gears-poster.jpg`。生成源码在 `scripts/render-hero-gears.py`，需要 Pillow 和 ffmpeg，可用 `python scripts/render-hero-gears.py --ffmpeg /path/to/ffmpeg` 重新生成；网站构建和发布不依赖这些工具。
 
 首屏英文专业方向使用随网站提供的 IBM Plex Mono Regular 等宽字体，并在首页预加载，避免 Windows、macOS 的默认等宽字体不同而改变外观。字体文件及 SIL Open Font License 存放在 `public/fonts/`；字体来源为 Google Fonts 的 IBM Plex Mono 拉丁字符集。
 

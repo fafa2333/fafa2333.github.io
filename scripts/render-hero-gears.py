@@ -126,9 +126,6 @@ def draw_gear(draw, gear, turn):
 def frame(index):
     image = Image.new('RGB', (WIDTH * SCALE, HEIGHT * SCALE), BACKGROUND)
     draw = ImageDraw.Draw(image)
-    # Quiet drafting axes retain the visual language of the original ring study.
-    line(draw, [(690 * SCALE, 415 * SCALE), (1400 * SCALE, 415 * SCALE)], tint(.13), .65)
-    line(draw, [(1040 * SCALE, 100 * SCALE), (1040 * SCALE, 755 * SCALE)], tint(.13), .65)
     turn = math.pi / 3 * index / (FPS * DURATION)
     for gear in GEARS:
         draw_gear(draw, gear, turn)
