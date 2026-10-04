@@ -22,6 +22,44 @@ const hexToRgb = hex => {
 const mixRgb = (from, to, amount) => `rgb(${from.map((channel, i) => Math.round(channel + (to[i] - channel) * amount)).join(',')})`;
 const darkness = (data, i) => data[i + 3] / 255 * (1 - (.2126 * data[i] + .7152 * data[i + 1] + .0722 * data[i + 2]) / 255);
 
+const imageMasks = new Map();
+const EMPTY_SOURCES = [];
+const loadSilhouetteMask = src => {
+  if (imageMasks.has(src)) return imageMasks.get(src);
+  // Analyze the original once. White background pixels never become particles.
+  const image = new Image();
+  image.decoding = 'async';
+  const imageReady = new Promise((resolve, reject) => {
+    image.onload = () => {
+      try {
+        const source = document.createElement('canvas');
+        const sourceCtx = source.getContext('2d', { willReadFrequently: true });
+        if (!sourceCtx) throw new Error('Canvas is unavailable');
+        const scale = Math.min(1, 1800 / Math.max(image.naturalWidth, image.naturalHeight));
+        source.width = Math.ceil(image.naturalWidth * scale);
+        source.height = Math.ceil(image.naturalHeight * scale);
+        sourceCtx.drawImage(image, 0, 0, source.width, source.height);
+        const { data } = sourceCtx.getImageData(0, 0, source.width, source.height);
+        let left = source.width, top = source.height, right = -1, bottom = -1;
+        for (let y = 0; y < source.height; y++) {
+          for (let x = 0; x < source.width; x++) {
+            if (darkness(data, (y * source.width + x) * 4) <= .45) continue;
+            left = Math.min(left, x); right = Math.max(right, x);
+            top = Math.min(top, y); bottom = Math.max(bottom, y);
+          }
+        }
+        if (right < left) throw new Error('No silhouette pixels');
+        resolve({ source, left, top, width: right - left + 1, height: bottom - top + 1 });
+      } catch (error) { reject(error); }
+    };
+    image.onerror = () => reject(new Error('Unable to load silhouette'));
+    image.src = src;
+  });
+  imageReady.catch(() => {});
+  imageMasks.set(src, imageReady);
+  return imageReady;
+};
+
 const ParticleSilhouette = ({
   src,
   alt = '粒子剪影',
@@ -36,31 +74,43 @@ const ParticleSilhouette = ({
   repelRadius = 150,
   fit = .82,
   departing = false,
+  retainCloud = false,
+  preloadSources = EMPTY_SOURCES,
   className = ''
 }) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const departureRef = useRef(null);
   const departingRef = useRef(departing);
+  const retainCloudRef = useRef(retainCloud);
+  const fieldRef = useRef(null);
   const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    preloadSources.forEach(source => loadSilhouetteMask(source).catch(() => {}));
+  }, [preloadSources]);
 
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!container || !canvas || !ctx || !src) return undefined;
-    setReady(false);
+    const previousField = fieldRef.current;
+    const transferringCloud = previousField?.src !== src && previousField?.particles.length > 0;
+    if (!transferringCloud) setReady(false);
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reducedMotion = motionQuery.matches;
     let alive = true;
     let visible = false;
     let needsFormation = true;
+    let entryFromCloud = transferringCloud;
     let particles = [];
     let palette = [];
     let animationFrame = null;
     let resizeFrame = null;
     let buildId = 0;
     let gathering = false;
+    let gatherFromCloud = false;
     let gatherStart = 0;
     let departureStart = null;
     let hiddenAt = null;
@@ -93,6 +143,7 @@ const ParticleSilhouette = ({
       });
       gatherStart = performance.now();
       gathering = true;
+      gatherFromCloud = !fromScatter;
       setPhase('gathering');
     };
     const setDeparture = leaving => {
@@ -135,7 +186,7 @@ const ParticleSilhouette = ({
       const scattering = departureStart !== null ? easeOutCubic(Math.min(1, exitProgress / .85)) : scrollScatter;
       // Keep particles visible during the breakup; fade only after they spread.
       const sceneAlpha = moving ? (departureStart !== null
-        ? 1 - smoothstep(.42, 1, exitProgress)
+        ? (retainCloudRef.current ? 1 : 1 - smoothstep(.42, 1, exitProgress))
         : 1 - smoothstep(.42, 1, scrollScatter)) : 1;
       const spread = Math.min(240, Math.min(width * .24, height * .55));
       const oldPointerX = pointer.x, oldPointerY = pointer.y;
@@ -201,7 +252,7 @@ const ParticleSilhouette = ({
         particle.y = baseY;
         // Eight palette groups avoid changing Canvas paint for every dense dot.
         if (tint !== particle.tint) { tint = particle.tint; ctx.fillStyle = palette[tint]; }
-        if (gathering) ctx.globalAlpha = sceneAlpha * (.35 + progress * .65);
+        if (gathering) ctx.globalAlpha = sceneAlpha * (gatherFromCloud ? 1 : .35 + progress * .65);
         ctx.fillRect(baseX - particle.size / 2, baseY - particle.size / 2, particle.size, particle.size);
       }
       ctx.globalAlpha = 1;
@@ -218,41 +269,15 @@ const ParticleSilhouette = ({
       }
     };
 
-    // Analyze the original once. White background pixels never become particles.
-    const image = new Image();
-    image.decoding = 'async';
-    const imageReady = new Promise((resolve, reject) => {
-      image.onload = () => {
-        try {
-          const source = document.createElement('canvas');
-          const sourceCtx = source.getContext('2d', { willReadFrequently: true });
-          if (!sourceCtx) throw new Error('Canvas is unavailable');
-          const scale = Math.min(1, 1800 / Math.max(image.naturalWidth, image.naturalHeight));
-          source.width = Math.ceil(image.naturalWidth * scale);
-          source.height = Math.ceil(image.naturalHeight * scale);
-          sourceCtx.drawImage(image, 0, 0, source.width, source.height);
-          const { data } = sourceCtx.getImageData(0, 0, source.width, source.height);
-          let left = source.width, top = source.height, right = -1, bottom = -1;
-          for (let y = 0; y < source.height; y++) {
-            for (let x = 0; x < source.width; x++) {
-              if (darkness(data, (y * source.width + x) * 4) <= .45) continue;
-              left = Math.min(left, x); right = Math.max(right, x);
-              top = Math.min(top, y); bottom = Math.max(bottom, y);
-            }
-          }
-          if (right < left) throw new Error('No silhouette pixels');
-          resolve({ source, left, top, width: right - left + 1, height: bottom - top + 1 });
-        } catch (error) { reject(error); }
-      };
-      image.onerror = () => reject(new Error('Unable to load silhouette'));
-      image.src = src;
-    });
-    imageReady.catch(() => {});
+    const imageReady = loadSilhouetteMask(src);
 
     const sampleImage = async () => {
       const currentBuild = ++buildId;
       const rect = container.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) { stopLoop(); return; }
+      // ResizeObserver also fires on mount. An identical sample must not cancel
+      // an entry or morph that already started from the image-load callback.
+      if (particles.length && Math.floor(rect.width) === width && Math.floor(rect.height) === height) return;
       try {
         const mask = await imageReady;
         if (!alive || currentBuild !== buildId) return;
@@ -302,13 +327,22 @@ const ParticleSilhouette = ({
         }
         particles.sort((a, b) => a.tint - b.tint);
         if (!particles.length) return;
+        if (entryFromCloud && needsFormation) {
+          particles.forEach((particle, i) => {
+            const previous = previousField.particles[Math.floor(i * previousField.particles.length / particles.length)];
+            particle.x = previous.x / previousField.width * width;
+            particle.y = previous.y / previousField.height * height;
+          });
+        }
         container.dataset.particleCount = particles.length;
         container.dataset.spacing = step;
         pointer.x = width / 2;
         pointer.y = height / 2;
         // Resizing an already visible scene only rebuilds its targets.
         if (departingRef.current) setDeparture(true);
-        else if (visible && needsFormation && !reducedMotion) { startGather(true); needsFormation = false; }
+        else if (visible && needsFormation && !reducedMotion) {
+          startGather(!entryFromCloud); needsFormation = false; entryFromCloud = false;
+        }
         else gathering = false;
         setReady(true);
         ensureRenderLoop();
@@ -359,7 +393,7 @@ const ParticleSilhouette = ({
       if (!visible) { needsFormation = true; stopLoop(); }
       else {
         if (!wasVisible && needsFormation && particles.length && !reducedMotion && !departingRef.current) {
-          startGather(true); needsFormation = false;
+          startGather(!entryFromCloud); needsFormation = false; entryFromCloud = false;
         }
         ensureRenderLoop();
       }
@@ -377,6 +411,9 @@ const ParticleSilhouette = ({
     return () => {
       alive = false;
       buildId += 1;
+      // The canvas stays mounted between particle projects. Carry the scattered
+      // field across the source change instead of starting a separate fade-in.
+      fieldRef.current = { src, width, height, particles: particles.map(({ x, y }) => ({ x, y })) };
       stopLoop();
       if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
       resizeObserver.disconnect();
@@ -393,6 +430,7 @@ const ParticleSilhouette = ({
   }, [src, particleSize, density, color, highlightColor, scatter, gatherDuration, stagger, pointerRepel, repelRadius, fit]);
 
   useEffect(() => { departingRef.current = departing; departureRef.current?.(departing); }, [departing]);
+  useEffect(() => { retainCloudRef.current = retainCloud; }, [retainCloud]);
 
   return <div ref={containerRef} className={`particle-silhouette ${className}`} data-ready={ready} role="img" aria-label={alt}>
     <img className="particle-silhouette__fallback" src={src} alt="" decoding="async" />

@@ -13,6 +13,11 @@ gsap.registerPlugin(ScrollTrigger);
 const email = 'yufuli99@gmail.com';
 const intro = '我专注于智能制造与机械结构设计，围绕仿生机构和移动机器人开展工程实践。从运动分析、结构建模与仿真优化，到零部件加工和样机调试，我希望让设计在真实场景中得到验证，将想法转化为可实现的工程方案。';
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const particleSources = {
+  butterfly: '/media/butterfly-silhouette.png',
+  'obstacle-robot': '/media/obstacle-robot-silhouette.png',
+};
+const particlePreload = Object.values(particleSources);
 const Arrow = ({ diagonal = true }) => <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d={diagonal ? 'M5 19 19 5M5 5h14v14' : 'M4 12h16m-6-6 6 6-6 6'} stroke="currentColor" strokeWidth="1.5" /></svg>;
 
 function Header({ project }) {
@@ -120,45 +125,54 @@ function ProjectIcon({ type }) {
 function Works() {
   const [active, setActive] = useState(0);
   const [particleLeaving, setParticleLeaving] = useState(false);
+  const [pending, setPending] = useState(null);
   const transitionTimer = useRef(null);
   const tabs = useRef([]);
-  const panels = useRef([]);
+  const panel = useRef(null);
+  const p = projects[active];
+  const hasParticles = Boolean(particleSources[p.slug]);
+  const retainCloud = pending !== null && Boolean(particleSources[projects[pending].slug]);
   const titleLines = [['仿生蝴蝶', '飞行器设计'], ['仿生越障机器人', '设计与仿真'], ['移动物料搬运', '机器人设计']];
   useEffect(() => {
-    const resume = () => { clearTimeout(transitionTimer.current); setParticleLeaving(false); };
+    const resume = () => { clearTimeout(transitionTimer.current); setParticleLeaving(false); setPending(null); };
     window.addEventListener('pageshow', resume);
     return () => { clearTimeout(transitionTimer.current); window.removeEventListener('pageshow', resume); };
   }, []);
   function selectProject(next) {
     clearTimeout(transitionTimer.current);
-    if (next === active) { setParticleLeaving(false); return; }
-    if (active === 0 && !reducedMotion()) {
+    if (next === active) { setParticleLeaving(false); setPending(null); return; }
+    if (hasParticles && !reducedMotion()) {
+      setPending(next);
       setParticleLeaving(true);
       transitionTimer.current = setTimeout(() => {
-        setActive(next); setParticleLeaving(false);
+        setActive(next); setParticleLeaving(false); setPending(null);
       }, PARTICLE_EXIT_DURATION);
-    } else { setActive(next); setParticleLeaving(false); }
+    } else { setActive(next); setParticleLeaving(false); setPending(null); }
   }
   function openDetails(event, project) {
-    if (project.slug !== 'butterfly' || reducedMotion() || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (!particleSources[project.slug] || reducedMotion() || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     clearTimeout(transitionTimer.current);
+    setPending(null);
     setParticleLeaving(true);
     transitionTimer.current = setTimeout(() => window.location.assign(`/projects/${project.slug}.html`), PARTICLE_EXIT_DURATION);
   }
   useLayoutEffect(() => {
     const mm = gsap.matchMedia();
     mm.add('(prefers-reduced-motion: no-preference)', () => {
-      const transition = gsap.timeline({ paused: true })
-        .fromTo('.showcase-art', { opacity: 0, x: 55, clipPath: 'inset(0 0 0 18%)' }, { opacity: 1, x: 0, clipPath: 'inset(0 0 0 0%)', duration: .75, ease: 'power3.out' })
-        .fromTo('.showcase-copy > *', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .45, stagger: .055, ease: 'power2.out' }, .14);
+      const transition = gsap.timeline({ paused: true });
+      // Particle projects share a persistent canvas. Its own scatter/gather
+      // animation stays visible instead of being hidden by a second art reveal.
+      const artwork = panel.current.querySelectorAll(hasParticles ? '.showcase-model-overlay' : '.showcase-art');
+      if (artwork.length) transition.fromTo(artwork, { opacity: 0, x: 55, clipPath: 'inset(0 0 0 18%)' }, { opacity: 1, x: 0, clipPath: 'inset(0 0 0 0%)', duration: .75, ease: 'power3.out' });
+      transition.fromTo('.showcase-copy > *', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .45, stagger: .055, ease: 'power2.out' }, .14);
       const trigger = ScrollTrigger.create({
-        trigger: panels.current[active].closest('#works'), start: 'top 72%', end: 'bottom top',
+        trigger: panel.current.closest('#works'), start: 'top 72%', end: 'bottom top',
         onEnter: () => transition.restart(), onEnterBack: () => transition.restart(),
         onLeave: () => transition.pause(0), onLeaveBack: () => transition.pause(0),
       });
       if (trigger.isActive) transition.play();
-    }, panels.current[active]);
+    }, panel.current);
     return () => mm.revert();
   }, [active]);
   function onTabKey(event, index) {
@@ -175,17 +189,18 @@ function Works() {
       <div className="project-rail"><span className="rail-heading mono">PROJECTS<br />01 — 03</span><div className="project-tabs" role="tablist" aria-label="选择工程项目" aria-orientation="vertical">
         {projects.map((p, i) => <button key={p.slug} ref={el => { tabs.current[i] = el; }} id={`work-tab-${p.slug}`} type="button" role="tab" aria-selected={active === i} aria-controls={`work-panel-${p.slug}`} aria-label={p.title} tabIndex={active === i ? 0 : -1} onClick={() => selectProject(i)} onKeyDown={e => onTabKey(e, i)} className={`project-tab ${active === i ? 'is-active' : ''}`}><span className="project-tab-icon"><span className="project-tab-art"><ProjectIcon type={p.slug} /></span><span className="project-tab-number mono">{p.number}</span></span></button>)}
       </div><span className="rail-count mono">0{active + 1} / 03</span></div>
-      <div className="project-stage">
-        {projects.map((p, i) => <div key={p.slug} ref={el => { panels.current[i] = el; }} id={`work-panel-${p.slug}`} role="tabpanel" aria-labelledby={`work-tab-${p.slug}`} tabIndex={0} hidden={active !== i} className={`showcase-panel showcase-${p.number}`}>
+      <div className="project-stage" aria-busy={particleLeaving}>
+        <div ref={panel} id={`work-panel-${p.slug}`} role="tabpanel" aria-labelledby={`work-tab-${p.slug}`} tabIndex={0} className={`showcase-panel showcase-${p.number}`}>
           <span className="showcase-watermark" aria-hidden="true">{p.number}</span><span className="showcase-register mono">ENGINEERING ARCHIVE / P{p.number}</span>
-          <figure className={`showcase-art ${p.slug === 'butterfly' ? 'has-particles' : ''}`}>
-            {p.slug === 'butterfly' ? <>
-              {active === 0 && <ParticleSilhouette src="/media/butterfly-silhouette.png" alt="仿生蝴蝶飞行器剪影，由粒子聚合构成" fit={1.04} departing={particleLeaving} />}
+          <figure className={`showcase-art ${hasParticles ? 'has-particles' : ''}`}>
+            {hasParticles ? <>
+              <ParticleSilhouette src={particleSources[p.slug]} alt={`${p.title}剪影，由粒子聚合构成`} fit={1.04} departing={particleLeaving} retainCloud={retainCloud} preloadSources={particlePreload} />
               {p.cover && <img className="showcase-model-overlay" src={p.cover} alt={p.coverAlt} loading="lazy" decoding="async" />}
             </> : p.cover ? <img src={p.cover} alt={p.coverAlt} loading="lazy" decoding="async" /> : <><TechnicalDrawing type={p.slug} /><figcaption>项目大图预留 / 线稿示意<span className="mono">P{p.number} · IMAGE TO FOLLOW</span></figcaption></>}
           </figure>
-          <div className="showcase-copy"><div className="showcase-kicker mono"><span className="signal-dot" />{p.english}</div><h3 aria-label={p.title}>{titleLines[i][0]}<br />{titleLines[i][1]}</h3><div className="showcase-meta"><span>{p.role}</span><span>{p.period}</span></div><p className="showcase-description">{p.description}</p><p className="showcase-topics">{p.subtitle}</p><dl className="showcase-metrics"><div><dt>{p.metricLabel}</dt><dd>{p.metric}</dd></div><div><dt>{p.secondMetricLabel}</dt><dd>{p.secondMetric}</dd></div></dl><a className="showcase-detail" href={`/projects/${p.slug}.html`} onClick={event => openDetails(event, p)}>查看项目详情 <Arrow /></a></div>
-        </div>)}
+          <div className="showcase-copy"><div className="showcase-kicker mono"><span className="signal-dot" />{p.english}</div><h3 aria-label={p.title}>{titleLines[active][0]}<br />{titleLines[active][1]}</h3><div className="showcase-meta"><span>{p.role}</span><span>{p.period}</span></div><p className="showcase-description">{p.description}</p><p className="showcase-topics">{p.subtitle}</p><dl className="showcase-metrics"><div><dt>{p.metricLabel}</dt><dd>{p.metric}</dd></div><div><dt>{p.secondMetricLabel}</dt><dd>{p.secondMetric}</dd></div></dl><a className="showcase-detail" href={`/projects/${p.slug}.html`} onClick={event => openDetails(event, p)}>查看项目详情 <Arrow /></a></div>
+        </div>
+        {projects.filter(project => project.slug !== p.slug).map(project => <div key={project.slug} id={`work-panel-${project.slug}`} role="tabpanel" aria-labelledby={`work-tab-${project.slug}`} hidden />)}
       </div>
     </div>
     <p className="showcase-hint"><span className="mono">INTERACTIVE INDEX</span> 点击线稿图标切换项目 · 大图与过程材料待补充</p>
