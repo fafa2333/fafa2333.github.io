@@ -23,6 +23,7 @@ pnpm preview
 - `src/styles.css`：响应式布局、统一排版和克制的工程视觉。
 - `src/components/TechText.jsx`、`TechText.css`：基于用户提供的 React Bits TechText 源码，负责首屏大标题的逐字轮廓、工程选框、尺寸标注、拖拽回弹与自动扫过效果。
 - `src/components/CursorGrid.jsx`、`CursorGrid.css`：基于用户提供的 React Bits CursorGrid 源码，负责首屏背景的鼠标网格余迹和轻微点击波纹。
+- `src/components/ParticleSilhouette.jsx`、`ParticleSilhouette.css`：由用户提供的 React Bits ParticleText 改为图片采样，负责蝴蝶剪影的粒子聚拢、鼠标排斥、滚动消散和项目转场。
 - `src/projects.json`：三个项目的已有内容、指标、5 个流程阶段及每页 3 组 / 6 张图片。
 - `src/media.js`：Hero 视频、海报、教育装饰图设置。
 - `index.html`、`projects/*.html`：Vite 多页面入口。保留原来的项目网址。
@@ -48,6 +49,10 @@ pnpm preview
 作品目录左侧使用用户提供的三个 PNG 线稿图标，依次为蝴蝶、四足机器人、移动机械臂，存放于 `public/media/project-icons/`。图像在圆框内裁切，编号徽标保留在圆框外，不显示图标下方的名称；完整项目名保留在按钮的无障碍标签中。电脑端三个图标等分竖栏的可用高度，大屏自动拉开间距，小屏保持紧凑；手机端使用固定间距。点击后右侧切换对应大图、名称、简介、指标及详情入口。图像显现与文字错峰入场由 GSAP 实现，支持连续快速切换、方向键及 Home / End，尊重减少动态效果偏好。大图占位属于概念示意，不是实际项目模型。
 
 项目封面 `P01/P02/P03`：在 `src/projects.json` 填写 `cover` 和具体 `coverAlt`，封面同时用于目录展示区与项目页。目录大图使用 `object-fit: contain`，推荐透明背景渲染或干净背景的整机图片。
+
+`P01` 目录背景改为用户提供的蝴蝶剪影粒子演绎，原图存于 `public/media/butterfly-silhouette.png`。Canvas 自动裁除白色留白，仅采样深色形状；粒子使用灰绿渐变，不加发光，按容器面积调整采样间距并限制数量。背景范围扩展至展示区的 108% 宽、110% 高，靠近文字一侧渐隐；`cover` 后续会作为独立渲染图叠加于粒子上方，并继续用于详情页封面。手机端保持自然滚动，不阻止触摸滑动。
+
+粒子首次进入、再次滚入和切回蝴蝶项目时聚拢，靠近视口边缘时随上下滚动逐渐消散。离开蝴蝶项目或进入详情页前预留 360ms 消散，再执行原有切换；连续切换时取消旧操作，浏览器返回时恢复剪影。支持“重播聚拢”和独立暂停，减少动态效果时显示静态粒子剪影并直接切换。离屏、后台页和页面离开时停止动画帧，图片或 Canvas 不可用时保留原图回退。
 
 教育装饰图 `D02`：在 `src/media.js` 填写 `educationImage`。
 

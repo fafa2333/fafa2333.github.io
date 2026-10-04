@@ -6,6 +6,7 @@ import projects from './projects.json';
 import { media } from './media';
 import TechText from './components/TechText';
 import CursorGrid from './components/CursorGrid';
+import ParticleSilhouette from './components/ParticleSilhouette';
 import './styles.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -118,9 +119,35 @@ function ProjectIcon({ type }) {
 
 function Works() {
   const [active, setActive] = useState(0);
+  const [particleLeaving, setParticleLeaving] = useState(false);
+  const [particlePaused, setParticlePaused] = useState(false);
+  const [particleReplay, setParticleReplay] = useState(0);
+  const transitionTimer = useRef(null);
   const tabs = useRef([]);
   const panels = useRef([]);
   const titleLines = [['仿生蝴蝶', '飞行器设计'], ['仿生越障机器人', '设计与仿真'], ['移动物料搬运', '机器人设计']];
+  useEffect(() => {
+    const resume = () => { clearTimeout(transitionTimer.current); setParticleLeaving(false); };
+    window.addEventListener('pageshow', resume);
+    return () => { clearTimeout(transitionTimer.current); window.removeEventListener('pageshow', resume); };
+  }, []);
+  function selectProject(next) {
+    clearTimeout(transitionTimer.current);
+    if (next === active) { setParticleLeaving(false); return; }
+    if (active === 0 && !particlePaused && !reducedMotion()) {
+      setParticleLeaving(true);
+      transitionTimer.current = setTimeout(() => {
+        setActive(next); setParticleLeaving(false);
+      }, 360);
+    } else { setActive(next); setParticleLeaving(false); }
+  }
+  function openDetails(event, project) {
+    if (project.slug !== 'butterfly' || particlePaused || reducedMotion() || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    clearTimeout(transitionTimer.current);
+    setParticleLeaving(true);
+    transitionTimer.current = setTimeout(() => window.location.assign(`/projects/${project.slug}.html`), 360);
+  }
   useLayoutEffect(() => {
     const mm = gsap.matchMedia();
     mm.add('(prefers-reduced-motion: no-preference)', () => {
@@ -142,19 +169,28 @@ function Works() {
     else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = (index + projects.length - 1) % projects.length;
     else if (event.key === 'Home') next = 0;
     else if (event.key === 'End') next = projects.length - 1;
-    if (next !== undefined) { event.preventDefault(); setActive(next); tabs.current[next]?.focus(); }
+    if (next !== undefined) { event.preventDefault(); selectProject(next); tabs.current[next]?.focus(); }
   }
   return <section id="works" className="works section-space shell">
     <div className="section-head" data-reveal><SectionLabel number="02" english="SELECTED WORK">作品集目录</SectionLabel><div className="section-heading-row"><h2>把思考，<br /><span className="muted">做成看得见的作品。</span></h2><p>选择左侧项目，探索工程实践。<br />从机构设计、仿真优化，到样机开发。</p></div></div>
     <div className="project-showcase" data-reveal>
       <div className="project-rail"><span className="rail-heading mono">PROJECTS<br />01 — 03</span><div className="project-tabs" role="tablist" aria-label="选择工程项目" aria-orientation="vertical">
-        {projects.map((p, i) => <button key={p.slug} ref={el => { tabs.current[i] = el; }} id={`work-tab-${p.slug}`} type="button" role="tab" aria-selected={active === i} aria-controls={`work-panel-${p.slug}`} aria-label={p.title} tabIndex={active === i ? 0 : -1} onClick={() => setActive(i)} onKeyDown={e => onTabKey(e, i)} className={`project-tab ${active === i ? 'is-active' : ''}`}><span className="project-tab-icon"><span className="project-tab-art"><ProjectIcon type={p.slug} /></span><span className="project-tab-number mono">{p.number}</span></span></button>)}
+        {projects.map((p, i) => <button key={p.slug} ref={el => { tabs.current[i] = el; }} id={`work-tab-${p.slug}`} type="button" role="tab" aria-selected={active === i} aria-controls={`work-panel-${p.slug}`} aria-label={p.title} tabIndex={active === i ? 0 : -1} onClick={() => selectProject(i)} onKeyDown={e => onTabKey(e, i)} className={`project-tab ${active === i ? 'is-active' : ''}`}><span className="project-tab-icon"><span className="project-tab-art"><ProjectIcon type={p.slug} /></span><span className="project-tab-number mono">{p.number}</span></span></button>)}
       </div><span className="rail-count mono">0{active + 1} / 03</span></div>
       <div className="project-stage">
         {projects.map((p, i) => <div key={p.slug} ref={el => { panels.current[i] = el; }} id={`work-panel-${p.slug}`} role="tabpanel" aria-labelledby={`work-tab-${p.slug}`} tabIndex={0} hidden={active !== i} className={`showcase-panel showcase-${p.number}`}>
           <span className="showcase-watermark" aria-hidden="true">{p.number}</span><span className="showcase-register mono">ENGINEERING ARCHIVE / P{p.number}</span>
-          <figure className="showcase-art">{p.cover ? <img src={p.cover} alt={p.coverAlt} loading="lazy" decoding="async" /> : <><TechnicalDrawing type={p.slug} /><figcaption>项目大图预留 / 线稿示意<span className="mono">P{p.number} · IMAGE TO FOLLOW</span></figcaption></>}</figure>
-          <div className="showcase-copy"><div className="showcase-kicker mono"><span className="signal-dot" />{p.english}</div><h3 aria-label={p.title}>{titleLines[i][0]}<br />{titleLines[i][1]}</h3><div className="showcase-meta"><span>{p.role}</span><span>{p.period}</span></div><p className="showcase-description">{p.description}</p><p className="showcase-topics">{p.subtitle}</p><dl className="showcase-metrics"><div><dt>{p.metricLabel}</dt><dd>{p.metric}</dd></div><div><dt>{p.secondMetricLabel}</dt><dd>{p.secondMetric}</dd></div></dl><a className="showcase-detail" href={`/projects/${p.slug}.html`}>查看项目详情 <Arrow /></a></div>
+          <figure className={`showcase-art ${p.slug === 'butterfly' ? 'has-particles' : ''}`}>
+            {p.slug === 'butterfly' ? <>
+              <ParticleSilhouette src="/media/butterfly-silhouette.png" alt="仿生蝴蝶飞行器剪影，由粒子聚合构成" fit={1.04} departing={particleLeaving} paused={particlePaused} replayToken={particleReplay} />
+              {p.cover && <img className="showcase-model-overlay" src={p.cover} alt={p.coverAlt} loading="lazy" decoding="async" />}
+              <figcaption className="particle-caption"><span className="mono">BIOMIMETIC FLIGHT / PARTICLE STUDY</span><div className="particle-controls">
+                <button type="button" onClick={() => { setParticlePaused(false); setParticleReplay(value => value + 1); }}>重播聚拢 <span aria-hidden="true">↻</span></button>
+                <button type="button" onClick={() => setParticlePaused(value => !value)} aria-label={particlePaused ? '播放剪影粒子动效' : '暂停剪影粒子动效'}>{particlePaused ? '播放' : '暂停'} <span aria-hidden="true">{particlePaused ? '▶' : 'Ⅱ'}</span></button>
+              </div></figcaption>
+            </> : p.cover ? <img src={p.cover} alt={p.coverAlt} loading="lazy" decoding="async" /> : <><TechnicalDrawing type={p.slug} /><figcaption>项目大图预留 / 线稿示意<span className="mono">P{p.number} · IMAGE TO FOLLOW</span></figcaption></>}
+          </figure>
+          <div className="showcase-copy"><div className="showcase-kicker mono"><span className="signal-dot" />{p.english}</div><h3 aria-label={p.title}>{titleLines[i][0]}<br />{titleLines[i][1]}</h3><div className="showcase-meta"><span>{p.role}</span><span>{p.period}</span></div><p className="showcase-description">{p.description}</p><p className="showcase-topics">{p.subtitle}</p><dl className="showcase-metrics"><div><dt>{p.metricLabel}</dt><dd>{p.metric}</dd></div><div><dt>{p.secondMetricLabel}</dt><dd>{p.secondMetric}</dd></div></dl><a className="showcase-detail" href={`/projects/${p.slug}.html`} onClick={event => openDetails(event, p)}>查看项目详情 <Arrow /></a></div>
         </div>)}
       </div>
     </div>
