@@ -4,6 +4,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 import './TechText.css';
 
@@ -69,6 +70,7 @@ const TechText = ({
 }) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
+  const overlayRef = useRef(null);
   const settingsRef = useRef(null);
   const wakeRef = useRef(() => {});
 
@@ -105,9 +107,11 @@ const TechText = ({
     const container = containerRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
+    const overlay = overlayRef.current;
+    const overlayCtx = overlay?.getContext('2d');
     const scratch = document.createElement('canvas');
     const scratchCtx = scratch.getContext('2d');
-    if (!container || !canvas || !ctx || !scratchCtx) return undefined;
+    if (!container || !canvas || !ctx || !overlay || !overlayCtx || !scratchCtx) return undefined;
 
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reducedMotion = motionQuery.matches;
@@ -127,10 +131,46 @@ const TechText = ({
     let pulse = 0;
     let placed = false;
     let dragging = -1;
-    const pointer = { x: 0, y: 0, inside: false };
+    let dragPointerId = null;
+    let overlayHasInk = false;
+    const pointer = { x: 0, y: 0, clientX: 0, clientY: 0, inside: false };
     const grab = { x: 0, y: 0 };
     const lens = { x: 0, y: 0 };
     const frame = { x1: 0, y1: 0, x2: 0, y2: 0, alpha: 0, index: -1 };
+
+    const clearOverlay = () => {
+      if (overlayHasInk) {
+        overlayCtx.setTransform(1, 0, 0, 1, 0, 0);
+        overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+      }
+      overlayHasInk = false;
+      overlay.dataset.active = 'false';
+    };
+    const releaseDrag = () => {
+      dragging = -1;
+      const pointerId = dragPointerId;
+      dragPointerId = null;
+      if (pointerId !== null && container.hasPointerCapture?.(pointerId)) container.releasePointerCapture(pointerId);
+    };
+    const resetInteraction = () => {
+      releaseDrag();
+      pointer.inside = false;
+      frame.alpha = 0;
+      glyphs.forEach(glyph => {
+        glyph.offset.x = glyph.offset.y = glyph.velocity.x = glyph.velocity.y = 0;
+        glyph.floating = false;
+      });
+      clearOverlay();
+      container.style.cursor = '';
+    };
+    const sizeOverlay = () => {
+      const nextWidth = Math.round(window.innerWidth * dpr);
+      const nextHeight = Math.round(window.innerHeight * dpr);
+      if (overlay.width !== nextWidth || overlay.height !== nextHeight) {
+        overlay.width = nextWidth;
+        overlay.height = nextHeight;
+      }
+    };
 
     const refreshFonts = () => {
       if (!alive) return;
@@ -266,6 +306,7 @@ const TechText = ({
         glyphs.push({
           ...base,
           offset: kept?.char === char ? kept.offset : { x: 0, y: 0 },
+          floating: kept?.char === char && Boolean(kept.floating),
           velocity: { x: 0, y: 0 },
           outline: 0,
           index: i,
@@ -273,7 +314,7 @@ const TechText = ({
           dashes: sprite(s, next, base, true)
         });
       });
-      dragging = -1;
+      releaseDrag();
       frame.index = -1;
       return next;
     };
@@ -365,7 +406,7 @@ const TechText = ({
       return [frame.x1, frame.y2 - d, -1, 0];
     };
 
-    const drawSpecks = (s, a) => {
+    const drawSpecks = (s, a, ctx) => {
       const w = frame.x2 - frame.x1;
       const h = frame.y2 - frame.y1;
       if (w < 2 || h < 2) return;
@@ -415,7 +456,7 @@ const TechText = ({
       }
     };
 
-    const drawFrame = s => {
+    const drawFrame = (s, ctx, originX = 0, originY = 0) => {
       const glyph = glyphs[frame.index];
       if (!glyph || frame.alpha < 0.01) return;
       const a = frame.alpha;
@@ -423,7 +464,7 @@ const TechText = ({
       const y1 = crisp(frame.y1);
       const x2 = crisp(frame.x2);
       const y2 = crisp(frame.y2);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, originX * dpr, originY * dpr);
 
       const moved = Math.hypot(glyph.offset.x, glyph.offset.y);
       if (moved > 1) {
@@ -463,7 +504,7 @@ const TechText = ({
 
       if (s.specks > 0) {
         ctx.lineWidth = 1;
-        drawSpecks(s, a);
+        drawSpecks(s, a, ctx);
       }
 
       if (!s.labels) return;
@@ -487,8 +528,13 @@ const TechText = ({
       const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
       last = now;
       const view = ensureLayout(s);
+      if (dragging >= 0) {
+        const rect = container.getBoundingClientRect();
+        pointer.x = pointer.clientX - rect.left;
+        pointer.y = pointer.clientY - rect.top;
+      }
 
-      const sweeping = motionEnabled && s.sweep && !pointer.inside && dragging < 0;
+      const sweeping = motionEnabled && s.sweep && !pointer.inside && dragging < 0 && !glyphs.some(glyph => glyph.floating);
       if (sweeping) clock += dt * s.speed;
       pulse += dt;
       let targetX = pointer.x;
@@ -499,7 +545,7 @@ const TechText = ({
       }
       const active = motionEnabled && (pointer.inside || sweeping || dragging >= 0);
       if (!motionEnabled) {
-        dragging = -1;
+        resetInteraction();
         presence = 0;
         frame.alpha = 0;
         glyphs.forEach(glyph => {
@@ -534,6 +580,7 @@ const TechText = ({
           offset.y = 0;
           velocity.x = 0;
           velocity.y = 0;
+          glyph.floating = false;
           return;
         }
         velocity.x += (-SPRING * offset.x - DAMPING * velocity.x) * dt;
@@ -543,14 +590,15 @@ const TechText = ({
         moving = true;
       });
 
-      const focus = dragging >= 0 ? dragging : active ? glyphAt(lens.x, lens.y) : -1;
+      const returning = glyphs.findIndex(glyph => glyph.floating);
+      const focus = dragging >= 0 ? dragging : returning >= 0 ? returning : active ? glyphAt(lens.x, lens.y) : -1;
       if (focus >= 0 && s.selection) {
         const glyph = glyphs[focus];
         const bx1 = glyph.box.x1 + glyph.offset.x - 6;
         const by1 = glyph.box.y1 + glyph.offset.y - 6;
         const bx2 = glyph.box.x2 + glyph.offset.x + 6;
         const by2 = glyph.box.y2 + glyph.offset.y + 6;
-        if (frame.index < 0 || frame.alpha < 0.02) {
+        if (frame.index < 0 || frame.alpha < 0.02 || glyph.floating) {
           frame.x1 = bx1;
           frame.y1 = by1;
           frame.x2 = bx2;
@@ -566,7 +614,7 @@ const TechText = ({
       frame.alpha = approach(frame.alpha, focus >= 0 && s.selection ? 1 : 0, dt, 0.1);
 
       glyphs.forEach((glyph, i) => {
-        const target = motionEnabled && s.reveal === 'letter' && i === focus && i !== dragging ? 1 : 0;
+        const target = motionEnabled && s.reveal === 'letter' && i === focus && !glyph.floating ? 1 : 0;
         glyph.outline = approach(glyph.outline, target, dt, 0.09);
         if (Math.abs(glyph.outline - target) > 0.002) moving = true;
         else glyph.outline = target;
@@ -577,6 +625,17 @@ const TechText = ({
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalCompositeOperation = 'source-over';
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Only displaced letters use the viewport canvas. Its portal escapes the
+      // Hero's clipping and stacking context; idle title rendering stays local.
+      const floating = glyphs.some(glyph => glyph.floating);
+      const origin = floating ? container.getBoundingClientRect() : null;
+      if (floating) {
+        sizeOverlay();
+        overlayCtx.setTransform(1, 0, 0, 1, 0, 0);
+        overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+        overlayHasInk = true;
+        overlay.dataset.active = 'true';
+      } else clearOverlay();
       for (const glyph of glyphs) {
         const moved = Math.hypot(glyph.offset.x, glyph.offset.y);
         if (moved > 1) {
@@ -586,18 +645,22 @@ const TechText = ({
         }
       }
       for (const glyph of glyphs) {
+        const target = glyph.floating ? overlayCtx : ctx;
+        const originX = glyph.floating ? -origin.left * dpr : 0;
+        const originY = glyph.floating ? -origin.top * dpr : 0;
         if (glyph.outline < 0.999) {
-          ctx.globalAlpha = 1 - glyph.outline;
-          blit(ctx, glyph.fill, glyph.offset.x, glyph.offset.y, 0, 0);
+          target.globalAlpha = 1 - glyph.outline;
+          blit(target, glyph.fill, glyph.offset.x, glyph.offset.y, originX, originY);
         }
         if (glyph.outline > 0.001) {
-          ctx.globalAlpha = glyph.outline;
-          blit(ctx, glyph.dashes, glyph.offset.x, glyph.offset.y, 0, 0);
+          target.globalAlpha = glyph.outline;
+          blit(target, glyph.dashes, glyph.offset.x, glyph.offset.y, originX, originY);
         }
-        ctx.globalAlpha = 1;
+        target.globalAlpha = 1;
       }
       if (presence > 0.001) drawReveal(s);
-      drawFrame(s);
+      if (glyphs[frame.index]?.floating) drawFrame(s, overlayCtx, origin.left, origin.top);
+      else drawFrame(s, ctx);
       if (container.dataset.ready !== 'true') container.dataset.ready = 'true';
 
       const settling =
@@ -615,6 +678,7 @@ const TechText = ({
     wakeRef.current = wake;
 
     const resize = () => {
+      resetInteraction();
       width = Math.max(1, container.clientWidth);
       height = Math.max(1, container.clientHeight);
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -628,6 +692,8 @@ const TechText = ({
       const rect = container.getBoundingClientRect();
       pointer.x = e.clientX - rect.left;
       pointer.y = e.clientY - rect.top;
+      pointer.clientX = e.clientX;
+      pointer.clientY = e.clientY;
     };
     const onMove = e => {
       locate(e);
@@ -647,6 +713,8 @@ const TechText = ({
         const index = glyphAt(pointer.x, pointer.y);
         if (index >= 0) {
           dragging = index;
+          dragPointerId = e.pointerId;
+          glyphs[index].floating = true;
           grab.x = pointer.x - glyphs[index].offset.x;
           grab.y = pointer.y - glyphs[index].offset.y;
           container.setPointerCapture?.(e.pointerId);
@@ -656,13 +724,18 @@ const TechText = ({
     };
     const onUp = e => {
       if (dragging >= 0) {
-        dragging = -1;
-        container.releasePointerCapture?.(e.pointerId);
+        releaseDrag();
         const rect = container.getBoundingClientRect();
         pointer.inside =
           e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
       }
       if (e.pointerType !== 'mouse') pointer.inside = false;
+      wake();
+    };
+    const onCancel = e => {
+      if (e?.type === 'lostpointercapture' && dragPointerId === null) return;
+      releaseDrag();
+      pointer.inside = false;
       wake();
     };
 
@@ -673,7 +746,7 @@ const TechText = ({
     const onVisibilityChange = () => {
       const rect = container.getBoundingClientRect();
       visible = !document.hidden && rect.bottom > 0 && rect.top < window.innerHeight;
-      if (!visible) { cancelAnimationFrame(raf); raf = 0; }
+      if (!visible) { resetInteraction(); cancelAnimationFrame(raf); raf = 0; }
       else wake();
     };
 
@@ -681,44 +754,53 @@ const TechText = ({
     container.addEventListener('pointerenter', onMove, { passive: true });
     container.addEventListener('pointerdown', onDown, { passive: true });
     container.addEventListener('pointerup', onUp, { passive: true });
-    container.addEventListener('pointercancel', onUp, { passive: true });
+    container.addEventListener('pointercancel', onCancel, { passive: true });
+    container.addEventListener('lostpointercapture', onCancel, { passive: true });
     container.addEventListener('pointerleave', onLeave, { passive: true });
 
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
     const intersectionObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting && !document.hidden;
-      if (!visible) { cancelAnimationFrame(raf); raf = 0; }
+      if (!visible) { resetInteraction(); cancelAnimationFrame(raf); raf = 0; }
       else wake();
     });
     intersectionObserver.observe(container);
     if (document.fonts) document.fonts.ready.then(refreshFonts, refreshFonts);
     motionQuery.addEventListener('change', onMotionChange);
     document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('resize', resize);
+    window.addEventListener('scroll', wake, { passive: true });
+    window.addEventListener('blur', onCancel);
 
     resize();
 
     return () => {
       alive = false;
+      resetInteraction();
       cancelAnimationFrame(raf);
       wakeRef.current = () => {};
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
       motionQuery.removeEventListener('change', onMotionChange);
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('scroll', wake);
+      window.removeEventListener('blur', onCancel);
       container.removeEventListener('pointermove', onMove);
       container.removeEventListener('pointerenter', onMove);
       container.removeEventListener('pointerdown', onDown);
       container.removeEventListener('pointerup', onUp);
-      container.removeEventListener('pointercancel', onUp);
+      container.removeEventListener('pointercancel', onCancel);
+      container.removeEventListener('lostpointercapture', onCancel);
       container.removeEventListener('pointerleave', onLeave);
     };
   }, []);
 
   return (
-    <span ref={containerRef} className={`tech-text ${className}`.trim()} style={style} role={ariaHidden ? undefined : 'img'} aria-label={ariaHidden ? undefined : text} aria-hidden={ariaHidden || undefined}>
+    <><span ref={containerRef} className={`tech-text ${className}`.trim()} data-draggable={draggable && !paused} style={style} role={ariaHidden ? undefined : 'img'} aria-label={ariaHidden ? undefined : text} aria-hidden={ariaHidden || undefined}>
       <canvas ref={canvasRef} className="tech-text-canvas" />
-    </span>
+    </span>{createPortal(<canvas ref={overlayRef} className="tech-text-drag-overlay" width="1" height="1" aria-hidden="true" />, document.body)}</>
   );
 };
 

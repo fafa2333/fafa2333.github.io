@@ -8,8 +8,26 @@
   letter-spacing: normal;
 }
 
+.tech-text[data-draggable="true"] { touch-action: none; }
+
 .tech-text-canvas {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.tech-text-drag-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.tech-text-drag-overlay[data-active="true"] { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tech-text[data-draggable="true"] { touch-action: pan-y; }
 }
