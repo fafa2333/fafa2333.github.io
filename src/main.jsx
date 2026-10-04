@@ -6,7 +6,7 @@ import projects from './projects.json';
 import { media } from './media';
 import TechText from './components/TechText';
 import CursorGrid from './components/CursorGrid';
-import ParticleSilhouette from './components/ParticleSilhouette';
+import ParticleSilhouette, { PARTICLE_EXIT_DURATION } from './components/ParticleSilhouette';
 import './styles.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -120,8 +120,6 @@ function ProjectIcon({ type }) {
 function Works() {
   const [active, setActive] = useState(0);
   const [particleLeaving, setParticleLeaving] = useState(false);
-  const [particlePaused, setParticlePaused] = useState(false);
-  const [particleReplay, setParticleReplay] = useState(0);
   const transitionTimer = useRef(null);
   const tabs = useRef([]);
   const panels = useRef([]);
@@ -134,19 +132,19 @@ function Works() {
   function selectProject(next) {
     clearTimeout(transitionTimer.current);
     if (next === active) { setParticleLeaving(false); return; }
-    if (active === 0 && !particlePaused && !reducedMotion()) {
+    if (active === 0 && !reducedMotion()) {
       setParticleLeaving(true);
       transitionTimer.current = setTimeout(() => {
         setActive(next); setParticleLeaving(false);
-      }, 360);
+      }, PARTICLE_EXIT_DURATION);
     } else { setActive(next); setParticleLeaving(false); }
   }
   function openDetails(event, project) {
-    if (project.slug !== 'butterfly' || particlePaused || reducedMotion() || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (project.slug !== 'butterfly' || reducedMotion() || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     clearTimeout(transitionTimer.current);
     setParticleLeaving(true);
-    transitionTimer.current = setTimeout(() => window.location.assign(`/projects/${project.slug}.html`), 360);
+    transitionTimer.current = setTimeout(() => window.location.assign(`/projects/${project.slug}.html`), PARTICLE_EXIT_DURATION);
   }
   useLayoutEffect(() => {
     const mm = gsap.matchMedia();
@@ -182,12 +180,8 @@ function Works() {
           <span className="showcase-watermark" aria-hidden="true">{p.number}</span><span className="showcase-register mono">ENGINEERING ARCHIVE / P{p.number}</span>
           <figure className={`showcase-art ${p.slug === 'butterfly' ? 'has-particles' : ''}`}>
             {p.slug === 'butterfly' ? <>
-              <ParticleSilhouette src="/media/butterfly-silhouette.png" alt="仿生蝴蝶飞行器剪影，由粒子聚合构成" fit={1.04} departing={particleLeaving} paused={particlePaused} replayToken={particleReplay} />
+              {active === 0 && <ParticleSilhouette src="/media/butterfly-silhouette.png" alt="仿生蝴蝶飞行器剪影，由粒子聚合构成" fit={1.04} departing={particleLeaving} />}
               {p.cover && <img className="showcase-model-overlay" src={p.cover} alt={p.coverAlt} loading="lazy" decoding="async" />}
-              <figcaption className="particle-caption"><span className="mono">BIOMIMETIC FLIGHT / PARTICLE STUDY</span><div className="particle-controls">
-                <button type="button" onClick={() => { setParticlePaused(false); setParticleReplay(value => value + 1); }}>重播聚拢 <span aria-hidden="true">↻</span></button>
-                <button type="button" onClick={() => setParticlePaused(value => !value)} aria-label={particlePaused ? '播放剪影粒子动效' : '暂停剪影粒子动效'}>{particlePaused ? '播放' : '暂停'} <span aria-hidden="true">{particlePaused ? '▶' : 'Ⅱ'}</span></button>
-              </div></figcaption>
             </> : p.cover ? <img src={p.cover} alt={p.coverAlt} loading="lazy" decoding="async" /> : <><TechnicalDrawing type={p.slug} /><figcaption>项目大图预留 / 线稿示意<span className="mono">P{p.number} · IMAGE TO FOLLOW</span></figcaption></>}
           </figure>
           <div className="showcase-copy"><div className="showcase-kicker mono"><span className="signal-dot" />{p.english}</div><h3 aria-label={p.title}>{titleLines[i][0]}<br />{titleLines[i][1]}</h3><div className="showcase-meta"><span>{p.role}</span><span>{p.period}</span></div><p className="showcase-description">{p.description}</p><p className="showcase-topics">{p.subtitle}</p><dl className="showcase-metrics"><div><dt>{p.metricLabel}</dt><dd>{p.metric}</dd></div><div><dt>{p.secondMetricLabel}</dt><dd>{p.secondMetric}</dd></div></dl><a className="showcase-detail" href={`/projects/${p.slug}.html`} onClick={event => openDetails(event, p)}>查看项目详情 <Arrow /></a></div>

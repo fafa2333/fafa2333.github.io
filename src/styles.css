@@ -137,10 +137,6 @@ h2 { font-size: clamp(30px, 3.8vw, 58px); line-height: 1.35; letter-spacing: -.0
 .showcase-art.has-particles { z-index: 0; width: 108%; height: 110%; top: -5%; right: -16%; }
 .showcase-art.has-particles .particle-silhouette { opacity: .46; mask-image: linear-gradient(90deg, transparent, rgba(0,0,0,.15) 18%, #000 52%); }
 .showcase-art.has-particles .showcase-model-overlay { position: absolute; z-index: 1; width: 66%; height: 72%; top: 10%; right: 19%; object-fit: contain; object-position: center; mask-image: none; pointer-events: none; }
-.showcase-art .particle-caption { right: 18%; bottom: 10%; z-index: 2; }
-.particle-controls { display: flex; align-items: center; gap: 16px; }
-.particle-controls button { background: transparent; display: inline-flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 9px; color: #626e55; }
-.particle-controls button:hover { color: var(--ink); }
 .showcase-copy { position: relative; padding-top: 175px; padding-bottom: 40px; margin-left: 6%; width: 43%; max-width: 480px; }
 .showcase-01 .showcase-copy { z-index: 1; }
 .showcase-kicker { display: flex; align-items: center; gap: 10px; font-size: 9px; color: #667253; }
@@ -289,9 +285,6 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .showcase-art.has-particles { position: relative; width: calc(100% + 50px); height: 245px; top: auto; right: auto; margin: 0 -25px 18px; }
   .showcase-art.has-particles .particle-silhouette { opacity: .55; mask-image: linear-gradient(90deg,rgba(0,0,0,.5),#000 35%); }
   .showcase-art.has-particles .showcase-model-overlay { width: 90%; height: 80%; top: 0; right: 5%; }
-  .showcase-art .particle-caption { right: 25px; bottom: 0; }
-  .particle-controls { gap: 12px; }
-  .particle-controls button { font-size: 8px; }
   .showcase-copy { width: 100%; max-width: none; padding: 0; margin: 0; }
   .showcase-kicker { font-size: 7px; gap: 7px; letter-spacing: .02em; }
   .showcase-copy h3 { font-size: 25px; margin-block: 16px 18px; }
@@ -448,7 +441,6 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .home-page .showcase-metrics > div { gap: 5px; }
   .home-page .showcase-detail { grid-column: 2; align-self: end; justify-self: end; margin-top: 16px; padding: 11px 13px; gap: 16px; font-size: 11px; }
   .home-page .showcase-art figcaption { bottom: 6%; }
-  .home-page .showcase-art .particle-caption { bottom: 10%; }
   .home-page .showcase-hint { flex-shrink: 0; margin-top: 12px; font-size: 9px; }
 
   .home-page .skills-section > .shell { height: 100%; display: flex; flex-direction: column; }

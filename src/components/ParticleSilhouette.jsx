@@ -1,5 +1,5 @@
 // Adapted from the user-provided React Bits ParticleText component.
-// Uses the same scatter/gather and cursor repulsion, sampling dark image pixels.
+// Samples dark image pixels for scene transitions and local cursor repulsion.
 // Upstream: https://github.com/DavidHDev/react-bits (MIT + Commons Clause).
 // See public/licenses/React-Bits-LICENSE.txt for the full notice.
 'use client';
@@ -7,8 +7,13 @@
 import { useEffect, useRef, useState } from 'react';
 import './ParticleSilhouette.css';
 
+export const PARTICLE_EXIT_DURATION = 680;
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+const smoothstep = (from, to, value) => {
+  const t = clamp((value - from) / (to - from), 0, 1);
+  return t * t * (3 - 2 * t);
+};
 const hexToRgb = hex => {
   const clean = hex.replace('#', '').trim();
   if (!/^[0-9a-fA-F]{6}$/.test(clean)) return null;
@@ -20,29 +25,22 @@ const darkness = (data, i) => data[i + 3] / 255 * (1 - (.2126 * data[i] + .7152 
 const ParticleSilhouette = ({
   src,
   alt = '粒子剪影',
-  particleSize = 2,
-  density = 4,
+  particleSize = 1.65,
+  density = 3.5,
   color = '#536049',
   highlightColor = '#929d72',
-  scatter = 90,
-  gatherDuration = 1500,
-  stagger = 280,
-  pointerRepel = 28,
-  repelRadius = 100,
-  idleDrift = .35,
-  trigger = 'hover',
+  scatter = 130,
+  gatherDuration = 1400,
+  stagger = 240,
+  pointerRepel = 72,
+  repelRadius = 150,
   fit = .82,
-  glow = false,
-  paused = false,
   departing = false,
-  replayToken = 0,
   className = ''
 }) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
-  const replayRef = useRef(null);
-  const syncRef = useRef(null);
-  const pausedRef = useRef(paused);
+  const departureRef = useRef(null);
   const departingRef = useRef(departing);
   const [ready, setReady] = useState(false);
 
@@ -56,117 +54,162 @@ const ParticleSilhouette = ({
     let reducedMotion = motionQuery.matches;
     let alive = true;
     let visible = false;
-    let firstFormation = true;
+    let needsFormation = true;
     let particles = [];
+    let palette = [];
     let animationFrame = null;
     let resizeFrame = null;
     let buildId = 0;
     let gathering = false;
-    let settling = false;
     let gatherStart = 0;
+    let departureStart = null;
+    let hiddenAt = null;
     let lastFrame = 0;
     let width = 0;
     let height = 0;
-    let presence = 0;
-    const pointer = { active: false, x: 0, y: 0, smoothX: 0, smoothY: 0 };
+    let presence = 1;
+    const pointer = { active: false, clientX: 0, clientY: 0, x: 0, y: 0 };
 
-    const motionEnabled = () => !reducedMotion && !pausedRef.current;
+    const setPhase = phase => {
+      if (container.dataset.phase !== phase) container.dataset.phase = phase;
+    };
     const stopLoop = () => {
       if (animationFrame !== null) cancelAnimationFrame(animationFrame);
       animationFrame = null;
       lastFrame = 0;
       pointer.active = false;
     };
-
     const startGather = (fromScatter = true) => {
-      if (!particles.length || !motionEnabled()) return;
-      const spread = Math.min(scatter, Math.min(width, height) * .28);
+      if (!particles.length || reducedMotion) return;
+      const spread = Math.min(scatter, Math.min(width, height) * .4);
       particles.forEach(particle => {
         if (fromScatter) {
-          const angle = particle.seed * Math.PI * 2;
-          const distance = spread * (.35 + particle.depth * .75);
-          particle.x = particle.targetX + Math.cos(angle) * distance + (particle.depth - .5) * spread * .55;
-          particle.y = particle.targetY + Math.sin(angle) * distance + (particle.seed - .5) * spread * .55;
+          particle.x = particle.targetX + particle.directionX * spread;
+          particle.y = particle.targetY + particle.directionY * spread;
         }
         particle.startX = particle.x;
         particle.startY = particle.y;
-        particle.delay = particle.seed * stagger;
+        particle.offsetX = particle.offsetY = particle.vx = particle.vy = 0;
       });
       gatherStart = performance.now();
       gathering = true;
-      settling = true;
+      setPhase('gathering');
     };
+    const setDeparture = leaving => {
+      departingRef.current = leaving;
+      if (leaving) {
+        gathering = false;
+        pointer.active = false;
+        departureStart = performance.now();
+        particles.forEach(particle => {
+          particle.exitX = particle.x;
+          particle.exitY = particle.y;
+        });
+      } else if (departureStart !== null) {
+        departureStart = null;
+        // A cancelled project switch returns from the current scattered positions.
+        if (visible) startGather(false);
+      }
+      ensureRenderLoop();
+    };
+    departureRef.current = setDeparture;
 
     const render = now => {
       animationFrame = null;
       if (!alive || !visible || document.hidden || !particles.length) return;
-      const moving = motionEnabled();
+      const moving = !reducedMotion;
       const dt = lastFrame ? Math.min(now - lastFrame, 50) : 16.67;
+      const frameStep = Math.min(dt / 16.67, 2);
       lastFrame = now;
-      const follow = moving ? 1 - Math.pow(.78, dt / 16.67) : 1;
-      const pointerFollow = 1 - Math.pow(.82, dt / 16.67);
       const rect = container.getBoundingClientRect();
-      const edge = Math.max(1, Math.min(height, window.innerHeight) * .55);
-      const targetPresence = departingRef.current ? 0 : clamp(Math.min((window.innerHeight - rect.top) / edge, rect.bottom / edge), 0, 1);
-      presence = moving ? presence + (targetPresence - presence) * (1 - Math.exp(-dt / 75)) : 1;
-      const dispersed = 1 - easeOutCubic(presence);
-      const spread = Math.min(scatter, Math.min(width, height) * .28);
-      pointer.smoothX += (pointer.x - pointer.smoothX) * pointerFollow;
-      pointer.smoothY += (pointer.y - pointer.smoothY) * pointerFollow;
-      ctx.clearRect(0, 0, width, height);
-      ctx.shadowBlur = glow && moving ? particleSize * 3 : 0;
-      ctx.shadowColor = highlightColor;
+      // On desktop, begin breaking up while the chapter is still largely visible.
+      // On long mobile pages, follow the artwork rather than the entire chapter.
+      const section = container.closest('#works');
+      const chapter = section && window.innerWidth >= 1000 && window.innerHeight >= 560
+        ? section.getBoundingClientRect() : rect;
+      const edge = Math.max(1, Math.min(chapter.height, window.innerHeight) * .88);
+      const targetPresence = clamp(Math.min((window.innerHeight - chapter.top) / edge, chapter.bottom / edge), 0, 1);
+      presence = moving ? presence + (targetPresence - presence) * (1 - Math.exp(-dt / 85)) : 1;
+      const scrollScatter = Math.pow(1 - presence, .85);
+      const exitProgress = departureStart === null ? 0 : clamp((now - departureStart) / PARTICLE_EXIT_DURATION, 0, 1);
+      const scattering = departureStart !== null ? easeOutCubic(Math.min(1, exitProgress / .85)) : scrollScatter;
+      // Keep particles visible during the breakup; fade only after they spread.
+      const sceneAlpha = moving ? (departureStart !== null
+        ? 1 - smoothstep(.42, 1, exitProgress)
+        : 1 - smoothstep(.42, 1, scrollScatter)) : 1;
+      const spread = Math.min(240, Math.min(width * .24, height * .55));
+      const oldPointerX = pointer.x, oldPointerY = pointer.y;
+      if (pointer.active) {
+        const follow = 1 - Math.exp(-dt / 65);
+        pointer.x += (pointer.clientX - rect.left - pointer.x) * follow;
+        pointer.y += (pointer.clientY - rect.top - pointer.y) * follow;
+      }
+      const flowX = clamp((pointer.x - oldPointerX) / frameStep, -22, 22);
+      const flowY = clamp((pointer.y - oldPointerY) / frameStep, -22, 22);
+      const radius = Math.min(repelRadius, Math.min(width, height) * .48);
+      const radiusSquared = radius * radius;
+      const damping = Math.pow(.82, frameStep);
       let complete = true;
-      let hasDisplacement = false;
-      particles.forEach(particle => {
+      let settling = false;
+      let tint = -1;
+      ctx.clearRect(0, 0, width, height);
+      ctx.globalAlpha = sceneAlpha;
+      for (const particle of particles) {
         let baseX = particle.targetX;
         let baseY = particle.targetY;
         let progress = 1;
-        if (gathering && moving) {
+        if (moving && departureStart !== null) {
+          baseX = particle.exitX;
+          baseY = particle.exitY;
+        } else if (gathering && moving) {
           progress = clamp((now - gatherStart - particle.delay) / Math.max(1, gatherDuration), 0, 1);
           const eased = easeOutCubic(progress);
           baseX = particle.startX + (particle.targetX - particle.startX) * eased;
           baseY = particle.startY + (particle.targetY - particle.startY) * eased;
           if (progress < 1) complete = false;
-        } else if (moving && idleDrift > 0) {
-          baseX += Math.sin(now * .0009 + particle.seed * 10) * idleDrift * particle.depth;
-          baseY += Math.cos(now * .00075 + particle.depth * 10) * idleDrift * particle.depth;
         }
-        if (pointer.active && moving && pointerRepel > 0 && repelRadius > 0) {
-          const dx = baseX - pointer.smoothX;
-          const dy = baseY - pointer.smoothY;
-          const distance = Math.hypot(dx, dy);
-          if (distance > 0 && distance < repelRadius) {
-            const force = Math.pow(1 - distance / repelRadius, 2) * pointerRepel;
-            baseX += dx / distance * force;
-            baseY += dy / distance * force;
+
+        let offsetX = 0, offsetY = 0;
+        if (pointer.active && moving && departureStart === null && radius > 0) {
+          const dx = baseX - pointer.x, dy = baseY - pointer.y;
+          const distanceSquared = dx * dx + dy * dy;
+          if (distanceSquared < radiusSquared) {
+            const distance = Math.sqrt(distanceSquared);
+            const nx = distance > .1 ? dx / distance : particle.directionX;
+            const ny = distance > .1 ? dy / distance : particle.directionY;
+            const falloff = Math.pow(1 - distance / radius, 2);
+            const force = falloff * pointerRepel * particle.depth;
+            // Radial pressure, a small curl, and cursor momentum form a local flow.
+            offsetX = (nx - ny * .28) * force + flowX * falloff * 1.3;
+            offsetY = (ny + nx * .28) * force + flowY * falloff * 1.3;
           }
         }
-        if (moving && dispersed > .001) {
-          const angle = particle.seed * Math.PI * 2;
-          const distance = spread * (1 + particle.depth) * dispersed;
-          baseX += Math.cos(angle) * distance;
-          baseY += Math.sin(angle) * distance;
+        if (moving && departureStart === null) {
+          particle.vx = (particle.vx + (offsetX - particle.offsetX) * .07 * frameStep) * damping;
+          particle.vy = (particle.vy + (offsetY - particle.offsetY) * .07 * frameStep) * damping;
+          particle.offsetX += particle.vx * frameStep;
+          particle.offsetY += particle.vy * frameStep;
+          if (Math.abs(offsetX - particle.offsetX) + Math.abs(offsetY - particle.offsetY) + Math.abs(particle.vx) + Math.abs(particle.vy) > .1) settling = true;
+          baseX += particle.offsetX;
+          baseY += particle.offsetY;
         }
-        particle.x += (baseX - particle.x) * follow;
-        particle.y += (baseY - particle.y) * follow;
-        if (Math.abs(baseX - particle.x) + Math.abs(baseY - particle.y) > .05) hasDisplacement = true;
-        ctx.globalAlpha = clamp(.35 + progress * .65, 0, 1) * presence;
-        ctx.fillStyle = particle.color;
-        const size = particle.size;
-        if (size <= 2.1) ctx.fillRect(particle.x - size / 2, particle.y - size / 2, size, size);
-        else {
-          ctx.beginPath();
-          ctx.arc(particle.x, particle.y, size / 2, 0, Math.PI * 2);
-          ctx.fill();
+        if (moving) {
+          baseX += particle.directionX * spread * scattering;
+          baseY += particle.directionY * spread * scattering;
         }
-      });
+        particle.x = baseX;
+        particle.y = baseY;
+        // Eight palette groups avoid changing Canvas paint for every dense dot.
+        if (tint !== particle.tint) { tint = particle.tint; ctx.fillStyle = palette[tint]; }
+        if (gathering) ctx.globalAlpha = sceneAlpha * (.35 + progress * .65);
+        ctx.fillRect(baseX - particle.size / 2, baseY - particle.size / 2, particle.size, particle.size);
+      }
       ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
       if (gathering && complete) gathering = false;
-      if (!moving) { gathering = false; settling = false; }
-      else settling = hasDisplacement;
-      if (moving && (gathering || settling || pointer.active || idleDrift > 0 || Math.abs(presence - targetPresence) > .001)) ensureRenderLoop();
+      if (!moving) gathering = false;
+      setPhase(!moving ? 'still' : departureStart !== null || scrollScatter > .025 ? 'dispersing' : gathering ? 'gathering' : 'formed');
+      const pointerSettling = pointer.active && Math.abs(flowX) + Math.abs(flowY) > .05;
+      if (moving && (gathering || settling || pointerSettling || Math.abs(presence - targetPresence) > .001 || (departureStart !== null && exitProgress < 1))) ensureRenderLoop();
     };
 
     const ensureRenderLoop = () => {
@@ -175,7 +218,7 @@ const ParticleSilhouette = ({
       }
     };
 
-    // Analyze the original file once. White pixels are background, not targets.
+    // Analyze the original once. White background pixels never become particles.
     const image = new Image();
     image.decoding = 'async';
     const imageReady = new Promise((resolve, reject) => {
@@ -204,7 +247,6 @@ const ParticleSilhouette = ({
       image.onerror = () => reject(new Error('Unable to load silhouette'));
       image.src = src;
     });
-    // Keep a failed load handled even if the containing project is initially hidden.
     imageReady.catch(() => {});
 
     const sampleImage = async () => {
@@ -229,36 +271,44 @@ const ParticleSilhouette = ({
         if (!sampleCtx) return;
         sampleCtx.drawImage(mask.source, mask.left, mask.top, mask.width, mask.height, 0, 0, sampled.width, sampled.height);
         const { data } = sampleCtx.getImageData(0, 0, sampled.width, sampled.height);
-        const maxParticles = Math.min(5200, Math.max(1200, Math.floor(width * height / 90)));
-        // Adaptive spacing keeps the field uniform instead of dropping entire rows.
-        const step = Math.max(2, density, Math.ceil(Math.sqrt(sampled.width * sampled.height / maxParticles)));
-        const targets = [];
+        // A denser uniform field with a bounded budget, including on large screens.
+        const maxSamples = Math.min(36000, Math.max(5000, Math.floor(width * height / 14)));
+        const step = Math.max(density, Math.ceil(Math.sqrt(sampled.width * sampled.height / maxSamples)));
+        const baseRgb = hexToRgb(color);
+        const highlightRgb = hexToRgb(highlightColor);
+        palette = Array.from({ length: 8 }, (_, i) => baseRgb && highlightRgb ? mixRgb(baseRgb, highlightRgb, i / 7) : color);
+        particles = [];
         for (let y = step / 2; y < sampled.height; y += step) {
           for (let x = step / 2; x < sampled.width; x += step) {
             const alpha = darkness(data, (Math.floor(y) * sampled.width + Math.floor(x)) * 4);
-            if (alpha > .4) targets.push({ x: (width - sampled.width) / 2 + x, y: (height - sampled.height) / 2 + y, alpha });
+            if (alpha <= .4) continue;
+            const i = particles.length;
+            const seed = ((i * 9301 + 49297) % 233280) / 233280;
+            const depth = .65 + (((i * 233 + 97) % 1000) / 1000) * .7;
+            const targetX = (width - sampled.width) / 2 + x + (seed - .5) * step * .18;
+            const targetY = (height - sampled.height) / 2 + y + (depth - 1) * step * .18;
+            const angle = seed * Math.PI * 2;
+            const distance = .45 + depth * .75;
+            particles.push({
+              x: targetX, y: targetY, startX: targetX, startY: targetY,
+              targetX, targetY, exitX: targetX, exitY: targetY,
+              size: Math.max(.6, particleSize * (.85 + alpha * .2 + seed * .12)),
+              tint: Math.round(clamp(targetX / Math.max(1, width) * .65 + (seed - .5) * .2, 0, 1) * 7),
+              directionX: Math.cos(angle) * distance, directionY: Math.sin(angle) * distance,
+              offsetX: 0, offsetY: 0, vx: 0, vy: 0,
+              seed, depth, delay: seed * stagger
+            });
           }
         }
-        const baseRgb = hexToRgb(color);
-        const highlightRgb = hexToRgb(highlightColor);
-        particles = targets.map((target, i) => {
-          const seed = ((i * 9301 + 49297) % 233280) / 233280;
-          const depth = .45 + (((i * 233 + 97) % 1000) / 1000) * .9;
-          const blend = clamp(target.x / Math.max(1, width) * .65 + (seed - .5) * .2, 0, 1);
-          return {
-            x: target.x, y: target.y, startX: target.x, startY: target.y,
-            targetX: target.x, targetY: target.y,
-            size: Math.max(.6, particleSize * (.75 + target.alpha * .45)),
-            color: baseRgb && highlightRgb ? mixRgb(baseRgb, highlightRgb, blend) : color,
-            seed, depth, delay: seed * stagger
-          };
-        });
+        particles.sort((a, b) => a.tint - b.tint);
         if (!particles.length) return;
-        pointer.x = pointer.smoothX = width / 2;
-        pointer.y = pointer.smoothY = height / 2;
-        firstFormation = true;
-        presence = 0;
-        if (visible && motionEnabled()) { startGather(true); firstFormation = false; }
+        container.dataset.particleCount = particles.length;
+        container.dataset.spacing = step;
+        pointer.x = width / 2;
+        pointer.y = height / 2;
+        // Resizing an already visible scene only rebuilds its targets.
+        if (departingRef.current) setDeparture(true);
+        else if (visible && needsFormation && !reducedMotion) { startGather(true); needsFormation = false; }
         else gathering = false;
         setReady(true);
         ensureRenderLoop();
@@ -272,47 +322,48 @@ const ParticleSilhouette = ({
       resizeFrame = requestAnimationFrame(() => { resizeFrame = null; sampleImage(); });
     };
     const handlePointerMove = event => {
-      if (!motionEnabled() || (event.pointerType !== 'mouse' && event.pointerType !== 'pen')) return;
+      if (reducedMotion || departingRef.current || (event.pointerType !== 'mouse' && event.pointerType !== 'pen')) return;
       const rect = canvas.getBoundingClientRect();
-      pointer.x = event.clientX - rect.left;
-      pointer.y = event.clientY - rect.top;
+      if (!pointer.active) { pointer.x = event.clientX - rect.left; pointer.y = event.clientY - rect.top; }
+      pointer.clientX = event.clientX;
+      pointer.clientY = event.clientY;
       pointer.active = true;
       ensureRenderLoop();
     };
-    const handlePointerLeave = () => { pointer.active = false; settling = true; ensureRenderLoop(); };
-    const handlePointerEnter = event => {
-      handlePointerMove(event);
-      if (event.pointerType === 'mouse' && trigger === 'hover') startGather(true);
-      ensureRenderLoop();
-    };
-    const replay = () => {
-      if (!motionEnabled()) return;
-      startGather(true);
-      ensureRenderLoop();
-    };
-    replayRef.current = replay;
-    const handleClick = () => { if (trigger === 'click') replay(); };
+    const handlePointerLeave = () => { pointer.active = false; ensureRenderLoop(); };
     const syncMotion = () => { reducedMotion = motionQuery.matches; ensureRenderLoop(); };
-    syncRef.current = syncMotion;
     const syncVisibility = () => {
-      if (document.hidden || !visible) stopLoop();
-      else { if (gathering) startGather(false); ensureRenderLoop(); }
+      if (document.hidden) { hiddenAt = performance.now(); stopLoop(); }
+      else {
+        if (hiddenAt !== null) {
+          const elapsed = performance.now() - hiddenAt;
+          gatherStart += elapsed;
+          if (departureStart !== null) departureStart += elapsed;
+          hiddenAt = null;
+        }
+        ensureRenderLoop();
+      }
     };
-    const resumeAfterNavigation = () => {
-      presence = 0;
-      firstFormation = true;
-      if (visible && motionEnabled()) { startGather(true); firstFormation = false; }
-      syncVisibility();
+    const resumeAfterNavigation = event => {
+      if (!event.persisted) return;
+      hiddenAt = null;
+      departureStart = null;
+      if (visible && !reducedMotion) startGather(true);
+      else needsFormation = true;
+      ensureRenderLoop();
     };
     const resizeObserver = new ResizeObserver(queueSample);
     const intersectionObserver = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting && entry.intersectionRatio > .05;
-      if (!visible) firstFormation = true;
-      if (visible && firstFormation && particles.length && motionEnabled()) {
-        startGather(true); firstFormation = false;
+      const wasVisible = visible;
+      visible = entry.isIntersecting && entry.intersectionRatio > .02;
+      if (!visible) { needsFormation = true; stopLoop(); }
+      else {
+        if (!wasVisible && needsFormation && particles.length && !reducedMotion && !departingRef.current) {
+          startGather(true); needsFormation = false;
+        }
+        ensureRenderLoop();
       }
-      syncVisibility();
-    }, { threshold: [0, .05] });
+    }, { threshold: [0, .02] });
     resizeObserver.observe(container);
     intersectionObserver.observe(container);
     motionQuery.addEventListener('change', syncMotion);
@@ -320,10 +371,8 @@ const ParticleSilhouette = ({
     window.addEventListener('scroll', ensureRenderLoop, { passive: true });
     window.addEventListener('pageshow', resumeAfterNavigation);
     window.addEventListener('pagehide', stopLoop);
-    canvas.addEventListener('pointerenter', handlePointerEnter, { passive: true });
     canvas.addEventListener('pointermove', handlePointerMove, { passive: true });
     canvas.addEventListener('pointerleave', handlePointerLeave);
-    canvas.addEventListener('click', handleClick);
     sampleImage();
     return () => {
       alive = false;
@@ -337,19 +386,13 @@ const ParticleSilhouette = ({
       window.removeEventListener('scroll', ensureRenderLoop);
       window.removeEventListener('pageshow', resumeAfterNavigation);
       window.removeEventListener('pagehide', stopLoop);
-      canvas.removeEventListener('pointerenter', handlePointerEnter);
       canvas.removeEventListener('pointermove', handlePointerMove);
       canvas.removeEventListener('pointerleave', handlePointerLeave);
-      canvas.removeEventListener('click', handleClick);
-      replayRef.current = null;
-      syncRef.current = null;
+      departureRef.current = null;
     };
-  }, [src, particleSize, density, color, highlightColor, scatter, gatherDuration, stagger,
-    pointerRepel, repelRadius, idleDrift, trigger, fit, glow]);
+  }, [src, particleSize, density, color, highlightColor, scatter, gatherDuration, stagger, pointerRepel, repelRadius, fit]);
 
-  useEffect(() => { pausedRef.current = paused; syncRef.current?.(); }, [paused]);
-  useEffect(() => { departingRef.current = departing; syncRef.current?.(); }, [departing]);
-  useEffect(() => { if (replayToken > 0) replayRef.current?.(); }, [replayToken]);
+  useEffect(() => { departingRef.current = departing; departureRef.current?.(departing); }, [departing]);
 
   return <div ref={containerRef} className={`particle-silhouette ${className}`} data-ready={ready} role="img" aria-label={alt}>
     <img className="particle-silhouette__fallback" src={src} alt="" decoding="async" />
