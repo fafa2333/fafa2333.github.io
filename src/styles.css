@@ -138,6 +138,11 @@ h2 { font-size: clamp(30px, 3.8vw, 58px); line-height: 1.35; letter-spacing: -.0
 .showcase-art.has-particles .particle-silhouette { opacity: .46; mask-image: linear-gradient(90deg, transparent, rgba(0,0,0,.15) 18%, #000 52%); }
 .showcase-art.has-particles .showcase-model-overlay { position: absolute; z-index: 1; width: 66%; height: 72%; top: 10%; right: 19%; object-fit: contain; object-position: center; mask-image: none; pointer-events: none; }
 .showcase-copy { position: relative; z-index: 1; padding-top: 175px; padding-bottom: 40px; margin-left: 6%; width: 43%; max-width: 480px; }
+.showcase-copy.is-outgoing { pointer-events: none; }
+.showcase-copy.is-entering > * { opacity: 0; transform: translateY(12px); }
+@media (prefers-reduced-motion: reduce) {
+  .showcase-copy.is-entering > * { opacity: 1; transform: none; }
+}
 .showcase-kicker { display: flex; align-items: center; gap: 10px; font-size: 9px; color: #667253; }
 .showcase-kicker .signal-dot { width: 6px; height: 6px; }
 .showcase-copy h3 { font-size: clamp(27px,3vw,46px); letter-spacing: -.055em; line-height: 1.35; margin-block: 20px 22px; }

@@ -123,61 +123,70 @@ function ProjectIcon({ type }) {
   return <img src={`/media/project-icons/${type}.png`} alt="" width="1254" height="1254" loading="lazy" decoding="async" />;
 }
 
+const projectTitleLines = [['仿生蝴蝶', '飞行器设计'], ['仿生越障机器人', '设计与仿真'], ['移动物料搬运', '机器人设计']];
+function ProjectCopy({ index, outgoing, entering, onDetails }) {
+  const project = projects[index];
+  const placement = outgoing ? { position: 'absolute', left: outgoing.left, top: outgoing.top, width: outgoing.width, margin: 0, maxWidth: 'none', transform: 'none' } : undefined;
+  return <div data-project-index={index} className={`showcase-copy ${outgoing ? 'is-outgoing' : 'is-current'} ${entering ? 'is-entering' : ''}`} style={placement} aria-hidden={outgoing ? true : undefined} inert={Boolean(outgoing)}>
+    <div className="showcase-kicker mono"><span className="signal-dot" />{project.english}</div>
+    <h3 aria-label={project.title}>{projectTitleLines[index][0]}<br />{projectTitleLines[index][1]}</h3>
+    <div className="showcase-meta"><span>{project.role}</span><span>{project.period}</span></div>
+    <p className="showcase-description">{project.description}</p><p className="showcase-topics">{project.subtitle}</p>
+    <dl className="showcase-metrics"><div><dt>{project.metricLabel}</dt><dd>{project.metric}</dd></div><div><dt>{project.secondMetricLabel}</dt><dd>{project.secondMetric}</dd></div></dl>
+    <a className="showcase-detail" href={`/projects/${project.slug}.html`} onClick={event => onDetails(event, project)}>查看项目详情 <Arrow /></a>
+  </div>;
+}
+
 function Works() {
   const [active, setActive] = useState(0);
   const [particleLeaving, setParticleLeaving] = useState(false);
-  const [pending, setPending] = useState(null);
+  const [outgoing, setOutgoing] = useState(null);
   const transitionTimer = useRef(null);
-  const destination = useRef(null);
+  const copyCleanup = useRef(null);
   const copyMotion = useRef(null);
   const leaving = useRef(false);
   const tabs = useRef([]);
   const panel = useRef(null);
   const p = projects[active];
   const hasParticles = Boolean(particleSources[p.slug]);
-  const retainCloud = pending !== null && Boolean(particleSources[projects[pending].slug]);
-  const titleLines = [['仿生蝴蝶', '飞行器设计'], ['仿生越障机器人', '设计与仿真'], ['移动物料搬运', '机器人设计']];
   useEffect(() => {
-    const resume = () => { clearTimeout(transitionTimer.current); destination.current = null; setParticleLeaving(false); setPending(null); };
+    const resume = () => { clearTimeout(transitionTimer.current); clearTimeout(copyCleanup.current); setParticleLeaving(false); setOutgoing(null); };
     window.addEventListener('pageshow', resume);
-    return () => { clearTimeout(transitionTimer.current); window.removeEventListener('pageshow', resume); };
+    return () => { clearTimeout(transitionTimer.current); clearTimeout(copyCleanup.current); window.removeEventListener('pageshow', resume); };
   }, []);
   function selectProject(next) {
-    if (next === active) {
-      clearTimeout(transitionTimer.current); destination.current = null;
-      setParticleLeaving(false); setPending(null); return;
-    }
-    if (hasParticles && !reducedMotion()) {
-      setPending(next);
-      // Rapid clicks update the destination of the same cloud transition.
-      if (destination.current?.kind === 'project') { destination.current.next = next; return; }
-      clearTimeout(transitionTimer.current);
-      destination.current = { kind: 'project', next };
-      setParticleLeaving(true);
-      transitionTimer.current = setTimeout(() => {
-        const target = destination.current;
-        destination.current = null;
-        if (target?.kind === 'project') setActive(target.next);
-        setParticleLeaving(false); setPending(null);
-      }, PARTICLE_EXIT_DURATION);
+    clearTimeout(transitionTimer.current);
+    setParticleLeaving(false);
+    if (next === active) return;
+    clearTimeout(copyCleanup.current);
+    if (!reducedMotion()) {
+      const bounds = panel.current.getBoundingClientRect();
+      // Keep the most visible previous copy when a transition is interrupted.
+      // A returning target can reuse its existing DOM and current opacity.
+      const previous = [...panel.current.querySelectorAll('.showcase-copy')]
+        .filter(copy => Number(copy.dataset.projectIndex) !== next)
+        .sort((a, b) => Number(getComputedStyle(b.querySelector('h3')).opacity) - Number(getComputedStyle(a.querySelector('h3')).opacity))[0];
+      const rect = previous.getBoundingClientRect();
+      setOutgoing({ index: Number(previous.dataset.projectIndex), left: rect.left - bounds.left, top: rect.top - bounds.top, width: rect.width });
+      // Only removes the inert, faded copy; never delays the incoming scene.
+      copyCleanup.current = setTimeout(() => setOutgoing(null), 760);
     } else {
-      clearTimeout(transitionTimer.current); destination.current = null;
-      setActive(next); setParticleLeaving(false); setPending(null);
+      setOutgoing(null);
     }
+    setActive(next);
   }
   function openDetails(event, project) {
     if (!particleSources[project.slug] || reducedMotion() || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     clearTimeout(transitionTimer.current);
-    destination.current = { kind: 'navigation' };
-    setPending(null);
     setParticleLeaving(true);
     transitionTimer.current = setTimeout(() => window.location.assign(`/projects/${project.slug}.html`), PARTICLE_EXIT_DURATION);
   }
   useLayoutEffect(() => {
     const mm = gsap.matchMedia();
     mm.add('(prefers-reduced-motion: no-preference)', context => {
-      const text = () => panel.current.querySelectorAll('.showcase-copy > *, .showcase-register');
+      const text = () => panel.current.querySelectorAll('.showcase-copy.is-current > *, .showcase-register');
+      const previousText = () => panel.current.querySelectorAll('.showcase-copy.is-outgoing > *');
       const artwork = () => panel.current.querySelectorAll('.showcase-model-overlay');
       let trigger;
       context.add('show', () => {
@@ -193,6 +202,15 @@ function Works() {
         gsap.killTweensOf([...text(), ...models]);
         gsap.to(text(), { opacity: 0, y: -10, duration: .28, stagger: .018, ease: 'power2.inOut', overwrite: true });
         if (models.length) gsap.to(models, { opacity: 0, x: -16, duration: .3, ease: 'power2.inOut', overwrite: true });
+      });
+      context.add('swap', () => {
+        const incoming = text();
+        const previous = previousText();
+        gsap.killTweensOf([...incoming, ...previous]);
+        // Both copies move at once: the incoming text starts before the old
+        // copy disappears. Existing inline opacity survives rapid reversals.
+        gsap.to(previous, { opacity: 0, y: -12, duration: .38, stagger: .012, ease: 'power2.inOut', overwrite: true });
+        gsap.to(incoming, { opacity: 1, y: 0, duration: .52, stagger: .025, ease: 'power2.out', overwrite: true });
       });
       context.add('reset', () => {
         const models = artwork();
@@ -216,8 +234,9 @@ function Works() {
   useLayoutEffect(() => {
     leaving.current = particleLeaving;
     if (particleLeaving) copyMotion.current?.hide();
+    else if (outgoing) copyMotion.current?.swap();
     else copyMotion.current?.show();
-  }, [active, particleLeaving]);
+  }, [active, particleLeaving, outgoing]);
   function onTabKey(event, index) {
     let next;
     if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = (index + 1) % projects.length;
@@ -232,16 +251,17 @@ function Works() {
       <div className="project-rail"><span className="rail-heading mono">PROJECTS<br />01 — 03</span><div className="project-tabs" role="tablist" aria-label="选择工程项目" aria-orientation="vertical">
         {projects.map((p, i) => <button key={p.slug} ref={el => { tabs.current[i] = el; }} id={`work-tab-${p.slug}`} type="button" role="tab" aria-selected={active === i} aria-controls={`work-panel-${p.slug}`} aria-label={p.title} tabIndex={active === i ? 0 : -1} onClick={() => selectProject(i)} onKeyDown={e => onTabKey(e, i)} className={`project-tab ${active === i ? 'is-active' : ''}`}><span className="project-tab-icon"><span className="project-tab-art"><ProjectIcon type={p.slug} /></span><span className="project-tab-number mono">{p.number}</span></span></button>)}
       </div><span className="rail-count mono">0{active + 1} / 03</span></div>
-      <div className="project-stage" aria-busy={particleLeaving}>
+      <div className="project-stage" aria-busy={particleLeaving || Boolean(outgoing)}>
         <div ref={panel} id={`work-panel-${p.slug}`} role="tabpanel" aria-labelledby={`work-tab-${p.slug}`} tabIndex={0} className={`showcase-panel showcase-${p.number}`}>
           <span className="showcase-watermark" aria-hidden="true">{p.number}</span><span className="showcase-register mono">ENGINEERING ARCHIVE / P{p.number}</span>
           <figure className={`showcase-art ${hasParticles ? 'has-particles' : ''}`}>
             {hasParticles ? <>
-              <ParticleSilhouette src={particleSources[p.slug]} alt={`${p.title}剪影，由粒子聚合构成`} fit={1.04} departing={particleLeaving} retainCloud={retainCloud} preloadSources={particlePreload} />
+              <ParticleSilhouette src={particleSources[p.slug]} alt={`${p.title}剪影，由粒子聚合构成`} fit={1.04} departing={particleLeaving} preloadSources={particlePreload} />
               {p.cover && <img className="showcase-model-overlay" src={p.cover} alt={p.coverAlt} loading="lazy" decoding="async" />}
             </> : p.cover ? <img src={p.cover} alt={p.coverAlt} loading="lazy" decoding="async" /> : <><TechnicalDrawing type={p.slug} /><figcaption>项目大图预留 / 线稿示意<span className="mono">P{p.number} · IMAGE TO FOLLOW</span></figcaption></>}
           </figure>
-          <div className="showcase-copy"><div className="showcase-kicker mono"><span className="signal-dot" />{p.english}</div><h3 aria-label={p.title}>{titleLines[active][0]}<br />{titleLines[active][1]}</h3><div className="showcase-meta"><span>{p.role}</span><span>{p.period}</span></div><p className="showcase-description">{p.description}</p><p className="showcase-topics">{p.subtitle}</p><dl className="showcase-metrics"><div><dt>{p.metricLabel}</dt><dd>{p.metric}</dd></div><div><dt>{p.secondMetricLabel}</dt><dd>{p.secondMetric}</dd></div></dl><a className="showcase-detail" href={`/projects/${p.slug}.html`} onClick={event => openDetails(event, p)}>查看项目详情 <Arrow /></a></div>
+          {outgoing && <ProjectCopy key={projects[outgoing.index].slug} index={outgoing.index} outgoing={outgoing} onDetails={openDetails} />}
+          <ProjectCopy key={p.slug} index={active} entering={Boolean(outgoing)} onDetails={openDetails} />
         </div>
         {projects.filter(project => project.slug !== p.slug).map(project => <div key={project.slug} id={`work-panel-${project.slug}`} role="tabpanel" aria-labelledby={`work-tab-${project.slug}`} hidden />)}
       </div>

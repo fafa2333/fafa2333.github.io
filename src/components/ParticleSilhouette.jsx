@@ -5,6 +5,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { morphWeights, PARTICLE_MORPH_DURATION } from './particleMotion';
 import './ParticleSilhouette.css';
 
 export const PARTICLE_EXIT_DURATION = 680;
@@ -169,6 +170,8 @@ const ParticleSilhouette = ({
     let gathering = false;
     let gatherFromCloud = false;
     let gatherStart = 0;
+    let morphing = false;
+    let morphStart = 0;
     let departureStart = null;
     let hiddenAt = null;
     let lastFrame = 0;
@@ -189,6 +192,7 @@ const ParticleSilhouette = ({
     };
     const startGather = (fromScatter = true) => {
       if (!particles.length || reducedMotion) return;
+      morphing = false;
       const spread = Math.min(scatter, Math.min(width, height) * .4);
       particles.forEach(particle => {
         if (fromScatter) {
@@ -213,6 +217,7 @@ const ParticleSilhouette = ({
         // A second click can change the destination without restarting breakup.
         if (departureStart !== null) return;
         gathering = false;
+        morphing = false;
         pointer.active = false;
         departureStart = performance.now();
         particles.forEach(particle => {
@@ -231,7 +236,7 @@ const ParticleSilhouette = ({
       animationFrame = null;
       if (!alive || !visible || document.hidden || !particles.length) return;
       const moving = !reducedMotion;
-      if (import.meta.env.DEV && lastFrame && (gathering || departureStart !== null)) {
+      if (import.meta.env.DEV && lastFrame && (gathering || morphing || departureStart !== null)) {
         transitionMaxFrameGap = Math.max(transitionMaxFrameGap, now - lastFrame);
         container.dataset.maxTransitionFrameGap = transitionMaxFrameGap.toFixed(1);
       }
@@ -255,6 +260,9 @@ const ParticleSilhouette = ({
         ? (retainCloudRef.current ? 1 : 1 - smoothstep(.42, 1, exitProgress))
         : 1 - smoothstep(.42, 1, scrollScatter)) : 1;
       const spread = Math.min(240, Math.min(width * .24, height * .55));
+      const morphProgress = morphing ? clamp((now - morphStart) / PARTICLE_MORPH_DURATION, 0, 1) : 1;
+      const morph = morphing ? morphWeights(morphProgress) : null;
+      const cloudSpread = Math.min(180, width * .18, height * .35);
       const oldPointerX = pointer.x, oldPointerY = pointer.y;
       if (pointer.active) {
         const follow = 1 - Math.exp(-dt / 65);
@@ -280,6 +288,14 @@ const ParticleSilhouette = ({
         if (moving && departureStart !== null) {
           baseX = particle.exitX;
           baseY = particle.exitY;
+        } else if (morphing && moving) {
+          const directionX = particle.startDirectionX * (1 - morph.direction) + particle.directionX * morph.direction;
+          const directionY = particle.startDirectionY * (1 - morph.direction) + particle.directionY * morph.direction;
+          baseX = particle.startX + (particle.targetX - particle.startX) * morph.blend
+            + directionX * cloudSpread * morph.cloud + particle.startVelocityX * PARTICLE_MORPH_DURATION * morph.carry;
+          baseY = particle.startY + (particle.targetY - particle.startY) * morph.blend
+            + directionY * cloudSpread * morph.cloud + particle.startVelocityY * PARTICLE_MORPH_DURATION * morph.carry;
+          particle.alpha = particle.startAlpha + (particle.targetAlpha - particle.startAlpha) * morph.blend;
         } else if (gathering && moving) {
           progress = clamp((now - gatherStart - particle.delay) / Math.max(1, gatherDuration), 0, 1);
           const eased = easeOutCubic(progress);
@@ -318,6 +334,8 @@ const ParticleSilhouette = ({
           baseX += particle.directionX * spread * scattering;
           baseY += particle.directionY * spread * scattering;
         }
+        particle.motionX = (baseX - particle.x) / dt;
+        particle.motionY = (baseY - particle.y) / dt;
         particle.x = baseX;
         particle.y = baseY;
         // Eight palette groups avoid changing Canvas paint for every dense dot.
@@ -330,10 +348,11 @@ const ParticleSilhouette = ({
       }
       ctx.globalAlpha = 1;
       if (gathering && complete) gathering = false;
-      if (!moving) gathering = false;
-      setPhase(!moving ? 'still' : departureStart !== null || scrollScatter > .025 ? 'dispersing' : gathering ? 'gathering' : 'formed');
+      if (morphing && morphProgress === 1) morphing = false;
+      if (!moving) { gathering = false; morphing = false; }
+      setPhase(!moving ? 'still' : departureStart !== null || scrollScatter > .025 ? 'dispersing' : morphing ? 'morphing' : gathering ? 'gathering' : 'formed');
       const pointerSettling = pointer.active && Math.abs(flowX) + Math.abs(flowY) > .05;
-      if (moving && (gathering || settling || pointerSettling || Math.abs(presence - targetPresence) > .001 || (departureStart !== null && exitProgress < 1))) ensureRenderLoop();
+      if (moving && (gathering || morphing || settling || pointerSettling || Math.abs(presence - targetPresence) > .001 || (departureStart !== null && exitProgress < 1))) ensureRenderLoop();
     };
 
     const ensureRenderLoop = () => {
@@ -351,6 +370,7 @@ const ParticleSilhouette = ({
           targetX: 0, targetY: 0, startX: 0, startY: 0, exitX: 0, exitY: 0,
           alpha: 0, targetAlpha: 0, startAlpha: 0,
           size: 0, tint: 0, depth: 1, delay: 0, directionX: 0, directionY: 0,
+          motionX: 0, motionY: 0, startDirectionX: 0, startDirectionY: 0, startVelocityX: 0, startVelocityY: 0,
           offsetX: 0, offsetY: 0, vx: 0, vy: 0,
         });
       }
@@ -380,6 +400,15 @@ const ParticleSilhouette = ({
         // Surplus dots remain in the cloud and fade during reassembly. Growing
         // fields reuse dormant dots, so no per-switch particle allocation occurs.
         const target = field.targets[i % field.targets.length];
+        if (isSwitch) {
+          particle.startX = particle.x;
+          particle.startY = particle.y;
+          particle.startAlpha = particle.alpha;
+          particle.startDirectionX = particle.directionX;
+          particle.startDirectionY = particle.directionY;
+          particle.startVelocityX = particle.motionX;
+          particle.startVelocityY = particle.motionY;
+        }
         particle.targetX = target.targetX;
         particle.targetY = target.targetY;
         particle.size = target.size;
@@ -393,18 +422,28 @@ const ParticleSilhouette = ({
           particle.x = particle.targetX;
           particle.y = particle.targetY;
           particle.alpha = particle.targetAlpha;
-          particle.offsetX = particle.offsetY = particle.vx = particle.vy = 0;
+          particle.motionX = particle.motionY = 0;
         }
+        particle.offsetX = particle.offsetY = particle.vx = particle.vy = 0;
       }
       activeSource = field.src;
       departureStart = null;
       gathering = false;
+      morphing = false;
+      // An idle scene has no frames. Do not count that idle interval as a stall.
+      lastFrame = 0;
       pointer.active = false;
       container.dataset.source = field.src;
       container.dataset.particleCount = field.targets.length;
       container.dataset.spacing = field.step;
       if (visible && !reducedMotion && (isSwitch || (isInitial && needsFormation))) {
-        startGather(!isSwitch);
+        if (isSwitch) {
+          // No exit timer, stagger, or stationary cloud between the two shapes.
+          morphing = true;
+          morphStart = performance.now();
+          if (import.meta.env.DEV) transitionMaxFrameGap = 0;
+          setPhase('morphing');
+        } else startGather(true);
         needsFormation = false;
       }
       setReady(true);
@@ -476,6 +515,7 @@ const ParticleSilhouette = ({
         if (hiddenAt !== null) {
           const elapsed = performance.now() - hiddenAt;
           gatherStart += elapsed;
+          morphStart += elapsed;
           if (departureStart !== null) departureStart += elapsed;
           hiddenAt = null;
         }
