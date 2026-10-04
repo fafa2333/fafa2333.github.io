@@ -19,6 +19,9 @@ const particleSources = {
   'material-handling-robot': '/media/material-handling-robot-silhouette.png',
 };
 const particlePreload = Object.values(particleSources);
+const particleSourceLayouts = {
+  [particleSources['obstacle-robot']]: { scale: .82, containInPanel: true },
+};
 const Arrow = ({ diagonal = true }) => <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d={diagonal ? 'M5 19 19 5M5 5h14v14' : 'M4 12h16m-6-6 6 6-6 6'} stroke="currentColor" strokeWidth="1.5" /></svg>;
 
 function Header({ project }) {
@@ -256,7 +259,7 @@ function Works() {
           <span className="showcase-watermark" aria-hidden="true">{p.number}</span><span className="showcase-register mono">ENGINEERING ARCHIVE / P{p.number}</span>
           <figure className={`showcase-art ${hasParticles ? 'has-particles' : ''}`}>
             {hasParticles ? <>
-              <ParticleSilhouette src={particleSources[p.slug]} alt={`${p.title}剪影，由粒子聚合构成`} fit={1.04} departing={particleLeaving} preloadSources={particlePreload} />
+              <ParticleSilhouette src={particleSources[p.slug]} alt={`${p.title}剪影，由粒子聚合构成`} fit={1.04} sourceLayouts={particleSourceLayouts} departing={particleLeaving} preloadSources={particlePreload} />
               {p.cover && <img className="showcase-model-overlay" src={p.cover} alt={p.coverAlt} loading="lazy" decoding="async" />}
             </> : p.cover ? <img src={p.cover} alt={p.coverAlt} loading="lazy" decoding="async" /> : <><TechnicalDrawing type={p.slug} /><figcaption>项目大图预留 / 线稿示意<span className="mono">P{p.number} · IMAGE TO FOLLOW</span></figcaption></>}
           </figure>

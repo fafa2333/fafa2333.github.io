@@ -25,6 +25,7 @@ const darkness = (data, i) => data[i + 3] / 255 * (1 - (.2126 * data[i] + .7152 
 
 const imageMasks = new Map();
 const EMPTY_SOURCES = [];
+const EMPTY_LAYOUTS = {};
 // Prepare fields between frames, rather than doing image analysis on a tab click.
 const yieldToBrowser = () => new Promise(resolve => {
   if (window.requestIdleCallback) window.requestIdleCallback(resolve, { timeout: 60 });
@@ -71,13 +72,17 @@ const loadSilhouetteMask = src => {
   return imageReady;
 };
 
-const prepareTargets = async (src, width, height, { fit, density, particleSize, stagger }, isCurrent) => {
+const prepareTargets = async (src, width, height, { fit, bounds, density, particleSize, stagger }, isCurrent) => {
   const mask = await loadSilhouetteMask(src);
   if (!isCurrent()) throw new Error('Field preparation cancelled');
-  const scale = Math.min(width * fit / mask.width, height * fit / mask.height);
+  const scale = Math.min(width * fit / mask.width, height * fit / mask.height,
+    bounds ? (bounds.right - bounds.left) / mask.width : Infinity,
+    bounds ? (bounds.bottom - bounds.top) / mask.height : Infinity);
   const sampled = document.createElement('canvas');
   sampled.width = Math.max(1, Math.ceil(mask.width * scale));
   sampled.height = Math.max(1, Math.ceil(mask.height * scale));
+  const originX = bounds ? clamp((width - sampled.width) / 2, bounds.left, bounds.right - sampled.width) : (width - sampled.width) / 2;
+  const originY = bounds ? clamp((height - sampled.height) / 2, bounds.top, bounds.bottom - sampled.height) : (height - sampled.height) / 2;
   const sampleCtx = sampled.getContext('2d', { willReadFrequently: true });
   if (!sampleCtx) throw new Error('Canvas is unavailable');
   sampleCtx.drawImage(mask.source, mask.left, mask.top, mask.width, mask.height, 0, 0, sampled.width, sampled.height);
@@ -94,8 +99,8 @@ const prepareTargets = async (src, width, height, { fit, density, particleSize, 
       const i = count++;
       const seed = ((i * 9301 + 49297) % 233280) / 233280;
       const depth = .65 + (((i * 233 + 97) % 1000) / 1000) * .7;
-      const targetX = (width - sampled.width) / 2 + x + (seed - .5) * step * .18;
-      const targetY = (height - sampled.height) / 2 + y + (depth - 1) * step * .18;
+      const targetX = originX + x + (seed - .5) * step * .18;
+      const targetY = originY + y + (depth - 1) * step * .18;
       const angle = seed * Math.PI * 2;
       const distance = .45 + depth * .75;
       const tint = Math.round(clamp(targetX / Math.max(1, width) * .65 + (seed - .5) * .2, 0, 1) * 7);
@@ -132,6 +137,7 @@ const ParticleSilhouette = ({
   departing = false,
   retainCloud = false,
   preloadSources = EMPTY_SOURCES,
+  sourceLayouts = EMPTY_LAYOUTS,
   className = ''
 }) => {
   const containerRef = useRef(null);
@@ -378,7 +384,24 @@ const ParticleSilhouette = ({
     const getField = source => {
       if (preparingFields.has(source)) return preparingFields.get(source);
       const version = geometryVersion;
-      const job = prepareTargets(source, width, height, { fit, density, particleSize, stagger }, () => alive && version === geometryVersion)
+      // Per-image sizing is baked into cached targets, without resizing or
+      // rebuilding the shared canvas when switching projects.
+      const layout = sourceLayouts[source];
+      const sourceFit = fit * (layout?.scale ?? 1);
+      const panel = layout?.containInPanel && container.closest('.showcase-panel');
+      let bounds;
+      if (panel) {
+        const frame = panel.getBoundingClientRect();
+        const area = container.getBoundingClientRect();
+        const inset = 16;
+        bounds = {
+          left: Math.max(0, frame.left - area.left) + inset,
+          right: Math.min(width, frame.right - area.left) - inset,
+          top: Math.max(0, frame.top - area.top) + inset,
+          bottom: Math.min(height, frame.bottom - area.top) - inset,
+        };
+      }
+      const job = prepareTargets(source, width, height, { fit: sourceFit, bounds, density, particleSize, stagger }, () => alive && version === geometryVersion)
         .then(field => {
           if (!alive || version !== geometryVersion) throw new Error('Field preparation cancelled');
           preparedFields.set(source, field);
@@ -569,7 +592,7 @@ const ParticleSilhouette = ({
       engineRef.current = null;
     };
     // Source changes are commands to this persistent engine, not effect rebuilds.
-  }, [particleSize, density, color, highlightColor, scatter, gatherDuration, stagger, pointerRepel, repelRadius, fit, preloadSources]);
+  }, [particleSize, density, color, highlightColor, scatter, gatherDuration, stagger, pointerRepel, repelRadius, fit, preloadSources, sourceLayouts]);
 
   useEffect(() => {
     departingRef.current = departing;
