@@ -113,7 +113,6 @@ function Works() {
   const [active, setActive] = useState(0);
   const tabs = useRef([]);
   const panels = useRef([]);
-  const shortNames = ['扑翼飞行器', '越障机器人', '搬运机器人'];
   const titleLines = [['仿生蝴蝶', '飞行器设计'], ['仿生越障机器人', '设计与仿真'], ['移动物料搬运', '机器人设计']];
   useLayoutEffect(() => {
     const mm = gsap.matchMedia();
@@ -142,7 +141,7 @@ function Works() {
     <div className="section-head" data-reveal><SectionLabel number="02" english="SELECTED WORK">作品集目录</SectionLabel><div className="section-heading-row"><h2>把思考，<br /><span className="muted">做成看得见的作品。</span></h2><p>选择左侧项目，探索工程实践。<br />从机构设计、仿真优化，到样机开发。</p></div></div>
     <div className="project-showcase" data-reveal>
       <div className="project-rail"><span className="rail-heading mono">PROJECTS<br />01 — 03</span><div className="project-tabs" role="tablist" aria-label="选择工程项目" aria-orientation="vertical">
-        {projects.map((p, i) => <button key={p.slug} ref={el => { tabs.current[i] = el; }} id={`work-tab-${p.slug}`} type="button" role="tab" aria-selected={active === i} aria-controls={`work-panel-${p.slug}`} aria-label={p.title} tabIndex={active === i ? 0 : -1} onClick={() => setActive(i)} onKeyDown={e => onTabKey(e, i)} className={`project-tab ${active === i ? 'is-active' : ''}`}><span className="project-tab-icon"><ProjectIcon type={p.slug} /><span className="project-tab-number mono">{p.number}</span></span><span className="project-tab-label">{shortNames[i]}</span></button>)}
+        {projects.map((p, i) => <button key={p.slug} ref={el => { tabs.current[i] = el; }} id={`work-tab-${p.slug}`} type="button" role="tab" aria-selected={active === i} aria-controls={`work-panel-${p.slug}`} aria-label={p.title} tabIndex={active === i ? 0 : -1} onClick={() => setActive(i)} onKeyDown={e => onTabKey(e, i)} className={`project-tab ${active === i ? 'is-active' : ''}`}><span className="project-tab-icon"><span className="project-tab-art"><ProjectIcon type={p.slug} /></span><span className="project-tab-number mono">{p.number}</span></span></button>)}
       </div><span className="rail-count mono">0{active + 1} / 03</span></div>
       <div className="project-stage">
         {projects.map((p, i) => <div key={p.slug} ref={el => { panels.current[i] = el; }} id={`work-panel-${p.slug}`} role="tabpanel" aria-labelledby={`work-tab-${p.slug}`} tabIndex={0} hidden={active !== i} className={`showcase-panel showcase-${p.number}`}>
