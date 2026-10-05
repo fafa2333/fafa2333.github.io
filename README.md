@@ -72,4 +72,4 @@ GSAP 让项目英文标签、两行标题、身份日期、简介、主题、指
 
 公开联系方式：`yufuli99@gmail.com`。原个人照片 `assets/portrait.png` 留存在源码目录，不参与构建或页面展示。
 
-结尾联系栏提供基于用户提供的 React Bits PulseHeart 的点赞按钮，默认灰色线框爱心，选中后切换为荧光黄，以 520ms 收缩、回弹完成反馈。按钮支持再次点击取消、键盘操作和减少动态效果；点赞状态通过 `li-yufu:portfolio-liked:v1` 保存在当前浏览器的 localStorage，并在同源标签页间同步。主页和项目详情页共用同一状态。当前为访客个人点赞状态，不展示跨访客累计数；没有统计后端。图标依赖 `@hugeicons/core-free-icons`，组件文件位于 `src/components/PulseHeart.jsx` 与 `PortfolioLike.jsx`，React Bits 许可随网站提供。
+结尾联系栏提供基于用户提供的 React Bits PulseHeart 的点赞按钮，默认灰色线框爱心，点赞后切换为荧光黄，以 520ms 收缩、回弹完成反馈。爱心左侧只显示总点赞量，使用 [CounterAPI.com](https://counterapi.com/) 的公开计数接口，主页和项目详情页共用 `fafa2333.github.io / like / portfolio` 计数器。页面加载、窗口重新激活及同源标签页点赞后只读取总数，点击爱心才提交一次点赞；服务端保存成功后通过 `li-yufu:portfolio-vote:v2:portfolio` 保存已点赞状态，避免重复点击。计数为累计点赞，不提供取消点赞。网络错误不会伪造总数，提交失败会恢复原状态并允许重试。localhost 预览使用独立的 `portfolio-development` 计数器，测试不计入正式总数。支持键盘操作和减少动态效果。请求直接使用 fetch，不包含服务密钥或第三方嵌入脚本。组件位于 `src/components/PulseHeart.jsx`、`PortfolioLike.jsx`，计数接口位于 `src/lib/portfolioLikes.js`；图标依赖 `@hugeicons/core-free-icons`，React Bits 许可随网站提供。

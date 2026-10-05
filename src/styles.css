@@ -206,10 +206,11 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
 .contact-links a:hover { color: var(--accent); }
 .footer-line { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding-block: 50px 25px; font-size: 9px; color: #959f87; }
 .footer-like { display: inline-flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.footer-like-label { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 11px; letter-spacing: .02em; color: #a5ad98; }
+.footer-like-count { min-width: 2ch; text-align: right; font-family: "IBM Plex Mono", "Courier New", monospace; font-size: 16px; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; color: #f3f4ee; }
 .footer-like .pulse-heart { min-width: 44px; min-height: 44px; }
 .footer-like .pulse-heart__pill { border: 1px solid #535c49; }
 .footer-like .pulse-heart[data-liked='true'] .pulse-heart__pill { border-color: #7b8a41; }
+.footer-like .pulse-heart[data-liked='true']:disabled { opacity: 1; }
 
 /* Project detail pages keep the original public .html URLs. */
 .project-hero { padding-top: 145px; }
