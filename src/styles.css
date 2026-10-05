@@ -204,7 +204,12 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
 .contact-links a { display: flex; align-items: center; gap: 8px; }
 .contact-links svg { width: 13px; }
 .contact-links a:hover { color: var(--accent); }
-.footer-line { display: flex; justify-content: space-between; gap: 20px; padding-block: 50px 25px; font-size: 9px; color: #959f87; }
+.footer-line { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding-block: 50px 25px; font-size: 9px; color: #959f87; }
+.footer-like { display: inline-flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.footer-like-label { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 11px; letter-spacing: .02em; color: #a5ad98; }
+.footer-like .pulse-heart { min-width: 44px; min-height: 44px; }
+.footer-like .pulse-heart__pill { border: 1px solid #535c49; }
+.footer-like .pulse-heart[data-liked='true'] .pulse-heart__pill { border-color: #7b8a41; }
 
 /* Project detail pages keep the original public .html URLs. */
 .project-hero { padding-top: 145px; }
@@ -359,7 +364,7 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .contact-bottom { flex-direction: column; align-items: start; gap: 30px; }
   .contact-email a { font-size: 25px; }
   .footer-line { font-size: 8px; flex-wrap: wrap; padding-top: 40px; }
-  .footer-line > span:last-child { display: none; }
+  .footer-tagline { display: none; }
   .project-hero { padding-top: 125px; }
   .breadcrumb { margin-bottom: 45px; }
   .project-heading h1 { font-size: 36px; margin-top: 30px; }
@@ -472,7 +477,7 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .home-page .major { margin-top: 8px; font-size: 12px; }
   .home-page .major [lang=en] { font-size: 11px; }
 
-  .home-page .contact { flex-shrink: 0; height: clamp(158px, 25svh, 230px); padding-block: clamp(16px, 2.5svh, 26px); }
+  .home-page .contact { flex-shrink: 0; height: clamp(184px, 28svh, 252px); padding-block: clamp(16px, 2.5svh, 26px); }
   .home-page .contact > .shell { height: 100%; display: grid; grid-template-columns: .95fr 1.05fr; grid-template-rows: 1fr auto; gap: 12px 60px; }
   .home-page .contact-heading { margin: 0; height: 100%; gap: 24px; }
   .home-page .contact h2 { font-size: clamp(25px, 4.2svh, 43px); }
