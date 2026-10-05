@@ -28,7 +28,7 @@ function disposeModel(model) {
 
 // Static camera and demand rendering: frames run only while an interaction settles.
 // Highlighting operates on materials and a screen-space silhouette, never geometry.
-export function createSkillsScene(host, callbacks) {
+export function createSkillsScene(host, callbacks, modelData) {
   const mobile = window.innerWidth < 760;
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, mobile ? 1.5 : 1.75), mobile ? 1.75 : 2));
@@ -96,13 +96,12 @@ export function createSkillsScene(host, callbacks) {
   composer.addPass(renderPass); composer.addPass(outline); composer.addPass(output); composer.addPass(fxaa);
 
   let model, bounds, width = 1, height = 1, frame = 0, pointerFrame = 0, disposed = false;
-  let selected = null, hovered = null, visible = true, transitionStart = 0;
+  let selected = null, hovered = null, visible = false, transitionStart = 0;
   let outlineFrom = 0, outlineTo = 0;
   const roots = {}, boxes = {}, materials = [];
   const pointer = new THREE.Vector2(), raycaster = new THREE.Raycaster();
   const accent = new THREE.Color('#dfff00');
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const abort = new AbortController();
   const corners = box => Array.from({ length: 8 }, (_, i) => new THREE.Vector3(
     i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z));
   const projectBox = box => {
@@ -212,10 +211,9 @@ export function createSkillsScene(host, callbacks) {
   const contextLost = event => { event.preventDefault(); callbacks.onError(); };
   renderer.domElement.addEventListener('webglcontextlost', contextLost);
 
-  fetch('/models/portfolio-scene.glb?v=20261006-hq', { signal: abort.signal })
-    .then(response => { if (!response.ok) throw new Error('Model unavailable'); return response.arrayBuffer(); })
+  modelData
     .then(buffer => new GLTFLoader().parseAsync(buffer, '/models/'))
-    .then(gltf => {
+    .then(async gltf => {
       if (disposed) { disposeModel(gltf.scene); return; }
       model = gltf.scene;
       const lights = [];
@@ -253,8 +251,19 @@ export function createSkillsScene(host, callbacks) {
       // Populate the static shadow map before OutlinePass temporarily hides objects.
       renderer.shadowMap.needsUpdate = true;
       floor.visible = false; shadowFloor.visible = false;
-      resize(); renderer.render(scene, camera);
+      resize();
+      // Compile and draw once even off screen, so scrolling does not trigger
+      // the first shader compilation, texture upload or shadow-map generation.
+      await renderer.compileAsync(scene, camera);
+      if (disposed) return;
+      renderer.render(scene, camera);
       floor.visible = true; shadowFloor.visible = true;
+      outline.selectedObjects = targets.map(name => roots[name]);
+      outline.edgeStrength = 0;
+      composer.render();
+      outline.enabled = false;
+      outline.selectedObjects = [];
+      composer.render();
       update(); callbacks.onReady();
     }).catch(error => { if (!disposed && error.name !== 'AbortError') callbacks.onError(error); });
 
@@ -262,7 +271,7 @@ export function createSkillsScene(host, callbacks) {
     select(name) { selected = name; update(); },
     hover,
     dispose() {
-      disposed = true; abort.abort(); cancelAnimationFrame(frame); cancelAnimationFrame(pointerFrame);
+      disposed = true; cancelAnimationFrame(frame); cancelAnimationFrame(pointerFrame);
       sizeObserver.disconnect(); visibilityObserver.disconnect();
       document.removeEventListener('visibilitychange', visibilityChange);
       reduced.removeEventListener('change', update);

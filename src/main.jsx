@@ -331,7 +331,7 @@ function App() {
       const heading = [['.section-label', 0, 12], ['.section-heading-row > *', .12]];
       chapter('#profile', [['.hero-overline, .hero-name-cn', 0, 14], ['h1', .12, 30], ['.hero-statement', .26], ['.hero-bottom > *', .4], ['.hero-video-caption', .64, 10]]);
       chapter('#works', [...heading, ['.rail-heading', .22, 12], ['.project-tab', .3, 16, .1], ['.project-stage', .26, 0], ['.rail-count, .showcase-hint', .62, 10]]);
-      chapter('#skills', [['.section-label', 0, 12], ['.capability-index', .12, 0], ['.capability-note', .28, 0]], 'power2.inOut');
+      chapter('#skills', [['.section-label', 0, 12]], 'power2.inOut');
       const learning = [...heading, ['.education-image', .24], ['.education-entry', .32, 22, .14]];
       const contact = [['.contact-heading', .5], ['.contact-email, .contact-links', .64, 16], ['.footer-line', .82, 10]];
       if (context.conditions.desktop) chapter('.education-contact', [...learning, ...contact]);

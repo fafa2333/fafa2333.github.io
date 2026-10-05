@@ -31,12 +31,13 @@ const overview = { en: 'DESIGN. SIMULATE. MAKE.', title: '能力概览',
   intro: ['让想法在分析、设计与验证中成形。'],
   details: [] };
 
-function CapabilityCopy({ item }) {
+function CapabilityCopy({ item, children }) {
   return <>
     <p className="capability-eyebrow mono" data-capability-row>{item.en}</p>
     <h2>{item.heading.map(line => <span data-capability-row key={line}>{line}</span>)}</h2>
     <div className="capability-rule" data-capability-row />
     <div className="capability-intro">{item.intro.map(line => <p data-capability-row key={line}>{line}</p>)}</div>
+    {children}
     {item.details.length > 0 && <div className="capability-details">{item.details.map(([label, ...lines]) => <div className="capability-detail" key={label}>
       <p className="mono capability-detail-label" data-capability-row>{label}</p>
       {lines.map(line => <p data-capability-row key={line}>{line}</p>)}
@@ -45,20 +46,19 @@ function CapabilityCopy({ item }) {
 }
 
 function Scene({ selected, onSelect }) {
-  const stage = useRef(null), host = useRef(null), engine = useRef(null);
+  const host = useRef(null), engine = useRef(null);
   const selectedRef = useRef(selected), selectRef = useRef(onSelect);
   selectedRef.current = selected; selectRef.current = onSelect;
-  const [near, setNear] = useState(false), [status, setStatus] = useState('loading');
+  const [status, setStatus] = useState('loading');
   const [hovered, setHovered] = useState(null), [layout, setLayout] = useState(null);
   useEffect(() => {
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) { setNear(true); observer.disconnect(); }
-    }, { rootMargin: '240px' });
-    observer.observe(stage.current); return () => observer.disconnect();
-  }, []);
-  useEffect(() => {
-    if (!near) return;
     let cancelled = false;
+    const abort = new AbortController();
+    // Start the download alongside the engine import as soon as the page mounts.
+    const modelData = fetch('/models/portfolio-scene.glb?v=20261006-hq', { signal: abort.signal })
+      .then(response => { if (!response.ok) throw new Error('Model unavailable'); return response.arrayBuffer(); });
+    // The engine attaches its error handler after its own module has loaded.
+    modelData.catch(() => {});
     import('./skillsSceneEngine').then(({ createSkillsScene }) => {
       if (cancelled) return;
       try {
@@ -68,12 +68,12 @@ function Scene({ selected, onSelect }) {
           onHover: name => { if (!cancelled) setHovered(name); },
           onSelect: name => selectRef.current(name),
           onLayout: (boxes, dimensions) => { if (!cancelled) setLayout({ boxes, ...dimensions }); },
-        });
+        }, modelData);
         engine.current.select(selectedRef.current);
       } catch { setStatus('error'); }
     }).catch(() => { if (!cancelled) setStatus('error'); });
-    return () => { cancelled = true; engine.current?.dispose(); engine.current = null; };
-  }, [near]);
+    return () => { cancelled = true; abort.abort(); engine.current?.dispose(); engine.current = null; };
+  }, []);
   useEffect(() => { engine.current?.select(selected); }, [selected]);
   const selectedBox = layout?.boxes[selected];
   const annotationPosition = id => {
@@ -85,13 +85,13 @@ function Scene({ selected, onSelect }) {
     const top = id === 'robot_arm' && compact ? box.y - 46 : id === 'telephone' ? box.y + box.height * .65 : box.y + box.height * .25;
     return { left: Math.max(10, Math.min(layout.width - labelWidth - 10, left)), top: Math.max(12, Math.min(layout.height - 52, top)) };
   };
-  return <div ref={stage} className={`capability-scene ${status === 'ready' ? 'is-ready' : ''}`} data-scene-status={status}>
+  return <div className={`capability-scene ${status === 'ready' ? 'is-ready' : ''}`} data-scene-status={status}>
     <div className="capability-canvas" ref={host} />
     {status !== 'ready' && <div className="capability-poster">
-      {near && <img src="/media/portfolio-scene-preview.webp" alt="工作室场景：显示器、机械臂、电话、桌椅和键鼠" loading="lazy" />}
+      <img src="/media/portfolio-scene-preview.webp" alt="工作室场景：显示器、机械臂、电话、桌椅和键鼠" loading="eager" />
       <span className="mono" role="status">{status === 'error' ? '3D 暂不可用 · 可通过下方名称查看能力' : 'LOADING WORKSPACE'}</span>
     </div>}
-    <div className="scene-drafting" aria-hidden="true"><span /><span /><span /></div>
+    <div className="scene-drafting" aria-hidden="true"><span className="scene-dots" /><span className="scene-stripes" /></div>
     <div className={`scene-annotations ${status === 'ready' ? 'is-projected' : 'is-fallback'}`}>
       {capabilities.map(item => <button type="button" key={item.id} className={`scene-annotation ${selected === item.id ? 'is-selected' : ''} ${hovered === item.id ? 'is-hovered' : ''}`}
         style={status === 'ready' ? annotationPosition(item.id) : undefined} data-model={item.id} aria-pressed={selected === item.id} aria-label={`查看${item.title}`}
@@ -107,7 +107,7 @@ function Scene({ selected, onSelect }) {
         <text x="0" y="-8">{capabilities.find(item => item.id === selected)?.code} / SELECTED</text>
       </g>}
     </svg>
-    <div className="scene-footer"><span className="mono">{selected ? '点击空白处返回全景' : '悬停探索 · 点击查看能力'}</span><button type="button" onClick={() => onSelect(null)} disabled={!selected} aria-label="恢复完整场景">全景 <span aria-hidden="true">↗</span></button></div>
+    <div className="scene-footer" aria-hidden="true" />
   </div>;
 }
 
@@ -156,13 +156,14 @@ export default function SkillsExperience() {
   };
   return <section ref={section} id="skills" className="skills-section section-space" onKeyDown={event => { if (event.key === 'Escape') select(null); }}>
     <div className="shell capability-shell">
-      <div className="section-label"><span className="section-index">03</span><span>个人能力</span><span className="label-en">CAPABILITIES</span></div>
+      <div className="section-label"><span className="section-index">03</span><span>个人能力</span><span className="label-en">select one object to view</span></div>
       <div className="capability-layout">
         <div className="capability-copy-column">
-          <nav className="capability-index" aria-label="个人能力分类">{capabilities.map(item => <button key={item.id} type="button" className={selected === item.id ? 'is-active' : ''} aria-pressed={selected === item.id} aria-label={item.title} onClick={() => select(item.id)}><span className="mono">{item.code}</span><span className="mono capability-index-name">{item.en}</span><span className="capability-index-mark" aria-hidden="true" /></button>)}</nav>
-          <div ref={copy} className={`capability-copy ${displayed ? '' : 'is-overview'}`} aria-live="polite" aria-atomic="true"><CapabilityCopy item={displayedItem} /></div>
-          <div className="capability-drafting" aria-hidden="true"><span /><span /></div>
-          <p className="capability-note">选择工作台上的物品，了解我的工具与实践。</p>
+          <div className="capability-top-dots" aria-hidden="true" />
+          <div ref={copy} className={`capability-copy ${displayed ? '' : 'is-overview'}`} aria-live="polite" aria-atomic="true"><CapabilityCopy item={displayedItem}>
+            <nav className="capability-index" aria-label="个人能力分类">{capabilities.map(item => <button key={item.id} type="button" className={selected === item.id ? 'is-active' : ''} aria-pressed={selected === item.id} aria-label={item.title} onClick={() => select(item.id)}><span className="mono">{item.code}</span><span className="mono capability-index-name">{item.en}</span><span className="capability-index-mark" aria-hidden="true" /></button>)}</nav>
+          </CapabilityCopy></div>
+          <div className="capability-watermark" aria-hidden="true"><span><span>CAPABILITY</span></span></div>
         </div>
         <Scene selected={selected} onSelect={select} />
       </div>
