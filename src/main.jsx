@@ -80,11 +80,11 @@ function Hero() {
   return <section id="profile" className="hero" aria-labelledby="hero-title">
     <div className="hero-background" aria-hidden="true">
       <video ref={video} muted loop playsInline preload="metadata" poster={media.heroPoster} onError={() => setFailed(true)}>{media.heroVideo && <source src={media.heroVideo} type="video/mp4" />}</video>
-      <CursorGrid className="hero-cursor-grid" cellSize={112} color="#747a6e" radius={200}
-        falloff="smooth" holdTime={140} fadeDuration={1000} lineWidth={.8} maxOpacity={.26}
-        fillOpacity={0} gridOpacity={0} clickPulse pulseSpeed={540} paused={paused || !visible} />
       <div className="hero-wash" />
     </div>
+    <CursorGrid className="hero-cursor-grid" cellSize={112} color="#747a6e" radius={200}
+      falloff="smooth" holdTime={140} fadeDuration={1000} lineWidth={.8} maxOpacity={.26}
+      fillOpacity={0} gridOpacity={0} clickPulse pulseSpeed={540} paused={paused || !visible} />
     <div className="hero-content shell">
       <div className="hero-overline"><span className="signal-dot" /><span>MECHANICAL DESIGN × SMART MANUFACTURING</span></div>
       <div className="hero-title-group">

@@ -266,19 +266,25 @@ const CursorGrid = ({
 
     const toLocal = e => {
       const rect = canvas.getBoundingClientRect();
-      return [e.clientX - rect.left, e.clientY - rect.top];
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      return x >= 0 && x <= w && y >= 0 && y <= h ? [x, y] : null;
     };
 
     const onPointerMove = e => {
       if (!enabled() || (e.pointerType !== 'mouse' && e.pointerType !== 'pen')) return;
-      const [x, y] = toLocal(e);
+      const point = toLocal(e);
+      if (!point) return;
+      const [x, y] = point;
       energize(x, y);
       wake();
     };
 
     const onPointerDown = e => {
       if (!enabled() || e.button !== 0 || e.pointerType !== 'mouse' || !propsRef.current.clickPulse) return;
-      const [x, y] = toLocal(e);
+      const point = toLocal(e);
+      if (!point) return;
+      const [x, y] = point;
       if (pulses.length >= 4) pulses.shift();
       pulses.push({ x, y, t0: performance.now() });
       wake();
@@ -297,8 +303,10 @@ const CursorGrid = ({
     rebuild();
     wake();
 
-    surface.addEventListener('pointermove', onPointerMove, { passive: true });
-    surface.addEventListener('pointerdown', onPointerDown, { passive: true });
+    // Include the fixed header and foreground controls, while the canvas bounds
+    // keep interaction confined to the hero, even after scrolling away.
+    document.addEventListener('pointermove', onPointerMove, { passive: true, capture: true });
+    document.addEventListener('pointerdown', onPointerDown, { passive: true, capture: true });
     document.addEventListener('visibilitychange', wake);
     motionQuery.addEventListener('change', wake);
     pointerQuery.addEventListener('change', wake);
@@ -309,8 +317,8 @@ const CursorGrid = ({
       wakeRef.current = null;
       ro.disconnect();
       intersectionObserver.disconnect();
-      surface.removeEventListener('pointermove', onPointerMove);
-      surface.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('pointermove', onPointerMove, true);
+      document.removeEventListener('pointerdown', onPointerDown, true);
       document.removeEventListener('visibilitychange', wake);
       motionQuery.removeEventListener('change', wake);
       pointerQuery.removeEventListener('change', wake);
