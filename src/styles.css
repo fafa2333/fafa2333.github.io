@@ -200,16 +200,15 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
 .contact-email a { font-size: clamp(19px, 2.6vw, 39px); letter-spacing: -.03em; }
 .contact-email a:hover { color: var(--accent); }
 .contact-email button { padding: 7px 0; color: #a5ad98; background: none; font-size: 11px; }
-.contact-links { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; font-size: 11px; }
+.contact-links { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; font-size: 11px; }
 .contact-links a { display: flex; align-items: center; gap: 8px; line-height: 1.3; }
 .contact-links a svg { width: 13px; }
 .contact-links a:hover { color: var(--accent); }
 .footer-line { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding-block: 50px 25px; font-size: 9px; color: #959f87; }
-.footer-like { display: inline-flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.footer-like-count { min-width: 2ch; text-align: right; font-family: "IBM Plex Mono", "Courier New", monospace; font-size: 16px; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; color: #f3f4ee; }
+.footer-like { display: inline-flex; align-items: center; gap: 4px; margin-top: -8px; flex-shrink: 0; }
+.footer-like-count { min-width: 1ch; text-align: right; font-family: "IBM Plex Mono", "Courier New", monospace; font-size: 16px; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; color: #f3f4ee; }
 .footer-like .pulse-heart { min-width: 44px; min-height: 44px; }
-.footer-like .pulse-heart__pill { border: 1px solid #535c49; }
-.footer-like .pulse-heart[data-liked='true'] .pulse-heart__pill { border-color: #7b8a41; }
+.footer-like .pulse-heart .pulse-heart__pill { border: 0; background: transparent; padding: 0; box-shadow: none; }
 .footer-like[aria-busy='true'] .pulse-heart:disabled { opacity: 1; }
 
 /* Project detail pages keep the original public .html URLs. */
@@ -488,7 +487,7 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .home-page .contact-email { gap: 5px; }
   .home-page .contact-email a { font-size: clamp(20px, 3.2svh, 30px); }
   .home-page .contact-email button { padding-block: 4px; }
-  .home-page .contact-links { gap: clamp(3px, .7svh, 6px); white-space: nowrap; }
+  .home-page .contact-links { gap: clamp(8px, 1.3svh, 12px); white-space: nowrap; }
   .home-page .footer-line { grid-column: 1 / -1; padding: 12px 0 0; border-top: 1px solid #4b5142; font-size: 8px; }
 }
 

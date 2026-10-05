@@ -81,16 +81,16 @@ export default function PortfolioLike() {
   }
 
   return <div className="footer-like" aria-busy={pending}>
+    <PulseHeart liked={liked} count={total ?? 0} onChange={changeLiked}
+      disabled={pending || total === null}
+      showCount={false} icon="heart" idleOutline size={28} corner={24}
+      likedColor="#dfff00" idleColor="#a5ad98" pillColor="transparent" textColor="#f3f4ee"
+      duration={520} dotSize={.28} overshoot={1.15} beat={1.5}
+      label={pending ? '正在保存点赞状态' : liked ? '取消点赞' : '点赞作品集'} />
     <span className="footer-like-count" title="总点赞量" aria-live="polite" aria-atomic="true">
       <span className="pulse-heart__sr">总点赞量：</span>
       {total === null ? '—' : new Intl.NumberFormat('en-US').format(total)}
     </span>
-    <PulseHeart liked={liked} count={total ?? 0} onChange={changeLiked}
-      disabled={pending || total === null}
-      showCount={false} icon="heart" idleOutline size={28} corner={24}
-      likedColor="#dfff00" idleColor="#a5ad98" pillColor="#34392f" textColor="#f3f4ee"
-      duration={520} dotSize={.28} overshoot={1.15} beat={1.5}
-      label={pending ? '正在保存点赞状态' : liked ? '取消点赞' : '点赞作品集'} />
     <span className="pulse-heart__sr" role="status">{error}</span>
   </div>;
 }
