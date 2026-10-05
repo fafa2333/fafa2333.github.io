@@ -131,12 +131,12 @@ function ProjectCopy({ index, outgoing, entering, onDetails }) {
   const project = projects[index];
   const placement = outgoing ? { position: 'absolute', left: outgoing.left, top: outgoing.top, width: outgoing.width, margin: 0, maxWidth: 'none', transform: 'none' } : undefined;
   return <div data-project-index={index} className={`showcase-copy ${outgoing ? 'is-outgoing' : 'is-current'} ${entering ? 'is-entering' : ''}`} style={placement} aria-hidden={outgoing ? true : undefined} inert={Boolean(outgoing)}>
-    <div className="showcase-kicker mono"><span className="signal-dot" />{project.english}</div>
-    <h3 aria-label={project.title}>{projectTitleLines[index][0]}<br />{projectTitleLines[index][1]}</h3>
-    <div className="showcase-meta"><span>{project.role}</span><span>{project.period}</span></div>
-    <p className="showcase-description">{project.description}</p><p className="showcase-topics">{project.subtitle}</p>
-    <dl className="showcase-metrics"><div><dt>{project.metricLabel}</dt><dd>{project.metric}</dd></div><div><dt>{project.secondMetricLabel}</dt><dd>{project.secondMetric}</dd></div></dl>
-    <a className="showcase-detail" href={`/projects/${project.slug}.html`} onClick={event => onDetails(event, project)}>查看项目详情 <Arrow /></a>
+    <div className="showcase-kicker mono" data-copy-row><span className="signal-dot" />{project.english}</div>
+    <h3 aria-label={project.title}>{projectTitleLines[index].map(line => <span className="showcase-title-line" data-copy-row key={line}>{line}</span>)}</h3>
+    <div className="showcase-meta" data-copy-row><span>{project.role}</span><span>{project.period}</span></div>
+    <p className="showcase-description" data-copy-row>{project.description}</p><p className="showcase-topics" data-copy-row>{project.subtitle}</p>
+    <dl className="showcase-metrics" data-copy-row><div><dt>{project.metricLabel}</dt><dd>{project.metric}</dd></div><div><dt>{project.secondMetricLabel}</dt><dd>{project.secondMetric}</dd></div></dl>
+    <a className="showcase-detail" data-copy-row href={`/projects/${project.slug}.html`} onClick={event => onDetails(event, project)}>查看项目详情 <Arrow /></a>
   </div>;
 }
 
@@ -168,11 +168,11 @@ function Works() {
       // A returning target can reuse its existing DOM and current opacity.
       const previous = [...panel.current.querySelectorAll('.showcase-copy')]
         .filter(copy => Number(copy.dataset.projectIndex) !== next)
-        .sort((a, b) => Number(getComputedStyle(b.querySelector('h3')).opacity) - Number(getComputedStyle(a.querySelector('h3')).opacity))[0];
+        .sort((a, b) => Number(getComputedStyle(b.querySelector('.showcase-title-line')).opacity) - Number(getComputedStyle(a.querySelector('.showcase-title-line')).opacity))[0];
       const rect = previous.getBoundingClientRect();
       setOutgoing({ index: Number(previous.dataset.projectIndex), left: rect.left - bounds.left, top: rect.top - bounds.top, width: rect.width });
       // Only removes the inert, faded copy; never delays the incoming scene.
-      copyCleanup.current = setTimeout(() => setOutgoing(null), 760);
+      copyCleanup.current = setTimeout(() => setOutgoing(null), 1120);
     } else {
       setOutgoing(null);
     }
@@ -188,8 +188,8 @@ function Works() {
   useLayoutEffect(() => {
     const mm = gsap.matchMedia();
     mm.add('(prefers-reduced-motion: no-preference)', context => {
-      const text = () => panel.current.querySelectorAll('.showcase-copy.is-current > *, .showcase-register');
-      const previousText = () => panel.current.querySelectorAll('.showcase-copy.is-outgoing > *');
+      const text = () => panel.current.querySelectorAll('.showcase-copy.is-current [data-copy-row], .showcase-register');
+      const previousText = () => panel.current.querySelectorAll('.showcase-copy.is-outgoing [data-copy-row]');
       const artwork = () => panel.current.querySelectorAll('.showcase-model-overlay');
       let trigger;
       context.add('show', () => {
@@ -197,13 +197,13 @@ function Works() {
         const models = artwork();
         gsap.killTweensOf([...text(), ...models]);
         // Start from the current opacity. Cancelling a switch does not flash.
-        gsap.to(text(), { opacity: 1, y: 0, duration: .48, stagger: .035, ease: 'power2.out', overwrite: true });
+        gsap.to(text(), { opacity: 1, x: 0, y: 0, duration: .54, stagger: .06, ease: 'power3.out', overwrite: true });
         if (models.length) gsap.to(models, { opacity: 1, x: 0, duration: .65, ease: 'power3.out', overwrite: true });
       });
       context.add('hide', () => {
         const models = artwork();
         gsap.killTweensOf([...text(), ...models]);
-        gsap.to(text(), { opacity: 0, y: -10, duration: .28, stagger: .018, ease: 'power2.inOut', overwrite: true });
+        gsap.to(text(), { opacity: 0, x: -28, y: 0, duration: .3, stagger: .035, ease: 'power2.inOut', overwrite: true });
         if (models.length) gsap.to(models, { opacity: 0, x: -16, duration: .3, ease: 'power2.inOut', overwrite: true });
       });
       context.add('swap', () => {
@@ -212,13 +212,13 @@ function Works() {
         gsap.killTweensOf([...incoming, ...previous]);
         // Both copies move at once: the incoming text starts before the old
         // copy disappears. Existing inline opacity survives rapid reversals.
-        gsap.to(previous, { opacity: 0, y: -12, duration: .38, stagger: .012, ease: 'power2.inOut', overwrite: true });
-        gsap.to(incoming, { opacity: 1, y: 0, duration: .52, stagger: .025, ease: 'power2.out', overwrite: true });
+        gsap.to(previous, { opacity: 0, x: -28, y: 0, duration: .3, stagger: .045, ease: 'power2.inOut', overwrite: true });
+        gsap.to(incoming, { opacity: 1, x: 0, y: 0, duration: .54, stagger: .06, ease: 'power3.out', overwrite: true });
       });
       context.add('reset', () => {
         const models = artwork();
         gsap.killTweensOf([...text(), ...models]);
-        gsap.set(text(), { opacity: 0, y: 16 });
+        gsap.set(text(), { opacity: 0, x: -32, y: 0 });
         if (models.length) gsap.set(models, { opacity: 0, x: 40 });
       });
       context.reset();
