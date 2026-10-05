@@ -111,32 +111,57 @@ function Scene({ selected, onSelect }) {
 }
 
 export default function SkillsExperience() {
-  const section = useRef(null), copy = useRef(null), motion = useRef(null), visible = useRef(false);
+  const section = useRef(null), index = useRef(null), copy = useRef(null);
+  const motion = useRef(null), indexMotion = useRef(null), visible = useRef(false);
   const current = useRef(null), pending = useRef(null), swapping = useRef(false);
   const pointerDown = useRef(null);
   const [selected, setSelected] = useState(null), [displayed, setDisplayed] = useState(null);
   const displayedItem = capabilities.find(item => item.id === displayed) || overview;
-  const animateIn = () => {
+  const animateIndex = entering => {
+    const rows = index.current?.querySelectorAll('button');
+    if (!rows) return;
+    indexMotion.current?.kill();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.set(rows, { opacity: 1, x: 0 }); return;
+    }
+    indexMotion.current = entering
+      ? gsap.fromTo(rows, { opacity: 0, x: -36 }, { opacity: 1, x: 0, duration: .48, stagger: .035, ease: 'power2.inOut' })
+      : gsap.to(rows, { opacity: 0, x: -36, duration: .26, stagger: .025, ease: 'power2.inOut' });
+  };
+  const animateIn = (delay = 0) => {
     if (!copy.current) return;
     motion.current?.kill();
     const rows = copy.current.querySelectorAll('[data-capability-row]');
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !visible.current) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       gsap.set(rows, { opacity: 1, x: 0 }); return;
     }
-    motion.current = gsap.fromTo(rows, { opacity: 0, x: -36 }, { opacity: 1, x: 0, duration: .48, stagger: .035, ease: 'power2.inOut' });
+    if (!visible.current) { gsap.set(rows, { opacity: 0, x: -36 }); return; }
+    motion.current = gsap.fromTo(rows, { opacity: 0, x: -36 }, { opacity: 1, x: 0, duration: .48, stagger: .035, delay, ease: 'power2.inOut' });
   };
   useLayoutEffect(() => { animateIn(); }, [displayed]);
   useEffect(() => {
+    const enter = () => {
+      visible.current = true; animateIndex(true);
+      if (!swapping.current) animateIn(.105);
+    };
+    const leave = () => {
+      visible.current = false; animateIndex(false);
+      if (swapping.current) return;
+      motion.current?.kill();
+      const rows = copy.current.querySelectorAll('[data-capability-row]');
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.set(rows, { opacity: 1, x: 0 }); return;
+      }
+      motion.current = gsap.to(rows, { opacity: 0, x: -36, duration: .26, stagger: .025, ease: 'power2.inOut' });
+    };
     const trigger = ScrollTrigger.create({
       trigger: section.current, start: 'top 72%', end: 'bottom top',
-      onEnter: () => { visible.current = true; if (!swapping.current) animateIn(); },
-      onEnterBack: () => { visible.current = true; if (!swapping.current) animateIn(); },
-      onLeave: () => { visible.current = false; if (!swapping.current) motion.current?.kill(); },
-      onLeaveBack: () => { visible.current = false; if (!swapping.current) motion.current?.kill(); },
+      onEnter: enter, onEnterBack: enter,
+      onLeave: leave, onLeaveBack: leave,
     });
     visible.current = trigger.isActive;
-    if (visible.current) animateIn();
-    return () => { trigger.kill(); motion.current?.kill(); };
+    if (visible.current) enter(); else leave();
+    return () => { trigger.kill(); motion.current?.kill(); indexMotion.current?.kill(); };
   }, []);
   const select = id => {
     setSelected(id); pending.current = id;
@@ -169,7 +194,7 @@ export default function SkillsExperience() {
       <div className="section-label"><span className="section-index">03</span><span>个人能力</span><span className="label-en">select one object to view</span></div>
       <div className="capability-layout">
         <div className={`capability-copy-column ${selected ? 'has-selection' : ''}`}>
-          <nav className="capability-index" aria-label="个人能力分类">{capabilities.map(item => <button key={item.id} type="button" className={selected === item.id ? 'is-active' : ''} aria-pressed={selected === item.id} aria-label={item.title} onClick={() => select(item.id)}><span className="mono">{item.code}</span><span className="mono capability-index-name">{item.en}</span><span className="capability-index-mark" aria-hidden="true" /></button>)}</nav>
+          <nav ref={index} className="capability-index" aria-label="个人能力分类">{capabilities.map(item => <button key={item.id} type="button" className={selected === item.id ? 'is-active' : ''} aria-pressed={selected === item.id} aria-label={item.title} onClick={() => select(item.id)}><span className="mono">{item.code}</span><span className="mono capability-index-name">{item.en}</span><span className="capability-index-mark" aria-hidden="true" /></button>)}</nav>
           <div ref={copy} className={`capability-copy ${displayed ? '' : 'is-overview'}`} aria-live="polite" aria-atomic="true"><CapabilityCopy item={displayedItem} /></div>
           <div className="capability-stripe-space" aria-hidden="true"><div className="capability-copy-stripes" /></div>
           <div className="capability-watermark" aria-hidden="true"><span><span>CAPABILITY</span></span></div>
