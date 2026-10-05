@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import CursorDotField from './CursorDotField';
 import './skills.css';
 
 const capabilities = [
@@ -42,6 +43,33 @@ function CapabilityCopy({ item }) {
       {lines.map(line => <p data-capability-row key={line}>{line}</p>)}
     </div>)}</div>}
   </>;
+}
+
+function SceneSelection({ box, selected, ready }) {
+  const group = useRef(null), rect = useRef(null), corners = useRef(null);
+  const frame = useRef({ x: 0, y: 0, width: 0, height: 0 });
+  const previous = useRef(null), tween = useRef(null);
+  useLayoutEffect(() => {
+    tween.current?.kill();
+    if (!box || !ready) { previous.current = null; return; }
+    const target = { x: box.x - 12, y: box.y - 12, width: box.width + 24, height: box.height + 24 };
+    const paint = () => {
+      const { x, y, width, height } = frame.current;
+      group.current.setAttribute('transform', `translate(${x} ${y})`);
+      rect.current.setAttribute('width', width); rect.current.setAttribute('height', height);
+      corners.current.setAttribute('d', `M0 18V0H18 M${width - 18} 0h18v18 M${width} ${height - 18}v18h-18 M18 ${height}H0v-18`);
+    };
+    // Continue from the current interpolated frame on rapid changes. Initial
+    // selection and responsive refits use the object's current projected bounds.
+    if (previous.current && previous.current !== selected && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      tween.current = gsap.to(frame.current, { ...target, duration: .52, ease: 'power2.inOut', onUpdate: paint });
+    } else { Object.assign(frame.current, target); paint(); }
+    previous.current = selected;
+    return () => tween.current?.kill();
+  }, [box, selected, ready]);
+  return <svg className={`scene-selection ${box && ready ? 'is-visible' : ''}`} width="100%" height="100%" aria-hidden="true">
+    <g ref={group}><rect ref={rect} /><path ref={corners} /><text x="0" y="-8">{capabilities.find(item => item.id === selected)?.code} / SELECTED</text></g>
+  </svg>;
 }
 
 function Scene({ selected, onSelect }) {
@@ -90,7 +118,7 @@ function Scene({ selected, onSelect }) {
       <img src="/media/portfolio-scene-preview.webp" alt="工作室场景：显示器、机械臂、电话、桌椅和键鼠" loading="eager" />
       <span className="mono" role="status">{status === 'error' ? '3D 暂不可用 · 可通过下方名称查看能力' : 'LOADING WORKSPACE'}</span>
     </div>}
-    <div className="scene-drafting" aria-hidden="true"><span className="scene-dots" /><span className="scene-dots scene-dots-lower" /></div>
+    <div className="scene-drafting" aria-hidden="true"><CursorDotField className="scene-dots" /><CursorDotField className="scene-dots scene-dots-lower" /></div>
     <div className={`scene-annotations ${status === 'ready' ? 'is-projected' : 'is-fallback'}`}>
       {capabilities.map(item => <button type="button" key={item.id} className={`scene-annotation ${selected === item.id ? 'is-selected' : ''} ${hovered === item.id ? 'is-hovered' : ''}`}
         style={status === 'ready' ? annotationPosition(item.id) : undefined} data-model={item.id} aria-pressed={selected === item.id} aria-label={`查看${item.title}`}
@@ -99,13 +127,7 @@ function Scene({ selected, onSelect }) {
         <span className="annotation-cross" aria-hidden="true" /><span className="annotation-text mono">{item.en}</span>
       </button>)}
     </div>
-    <svg className={`scene-selection ${selectedBox && status === 'ready' ? 'is-visible' : ''}`} width="100%" height="100%" aria-hidden="true">
-      {selectedBox && <g transform={`translate(${selectedBox.x - 12} ${selectedBox.y - 12})`}>
-        <rect width={selectedBox.width + 24} height={selectedBox.height + 24} />
-        <path d={`M0 18V0H18 M${selectedBox.width + 6} 0h18v18 M${selectedBox.width + 24} ${selectedBox.height + 6}v18h-18 M18 ${selectedBox.height + 24}H0v-18`} />
-        <text x="0" y="-8">{capabilities.find(item => item.id === selected)?.code} / SELECTED</text>
-      </g>}
-    </svg>
+    <SceneSelection box={selectedBox} selected={selected} ready={status === 'ready'} />
     <div className="scene-footer" aria-hidden="true" />
   </div>;
 }
@@ -191,11 +213,14 @@ export default function SkillsExperience() {
     onPointerDown={event => { pointerDown.current = { x: event.clientX, y: event.clientY }; }} onClick={resetFromBackground}
     onKeyDown={event => { if (event.key === 'Escape') select(null); }}>
     <div className="shell capability-shell">
-      <div className="section-label"><span className="section-index">03</span><span>个人能力</span><span className="label-en">select one object to view</span></div>
+      <div className="section-label"><span className="section-index">03</span><span>个人能力</span><span className="label-en">SELECT ONE OBJECT TO VIEW</span></div>
       <div className="capability-layout">
         <div className={`capability-copy-column ${selected ? 'has-selection' : ''}`}>
           <nav ref={index} className="capability-index" aria-label="个人能力分类">{capabilities.map(item => <button key={item.id} type="button" className={selected === item.id ? 'is-active' : ''} aria-pressed={selected === item.id} aria-label={item.title} onClick={() => select(item.id)}><span className="mono">{item.code}</span><span className="mono capability-index-name">{item.en}</span><span className="capability-index-mark" aria-hidden="true" /></button>)}</nav>
-          <div ref={copy} className={`capability-copy ${displayed ? '' : 'is-overview'}`} aria-live="polite" aria-atomic="true"><CapabilityCopy item={displayedItem} /></div>
+          <div className="capability-copy-slot">
+            <div className="capability-copy is-overview capability-copy-measure" aria-hidden="true" inert><CapabilityCopy item={overview} /></div>
+            <div ref={copy} className={`capability-copy ${displayed ? '' : 'is-overview'}`} aria-live="polite" aria-atomic="true"><CapabilityCopy item={displayedItem} /></div>
+          </div>
           <div className="capability-stripe-space" aria-hidden="true"><div className="capability-copy-stripes" /></div>
           <div className="capability-watermark" aria-hidden="true"><span><span>CAPABILITY</span></span></div>
         </div>

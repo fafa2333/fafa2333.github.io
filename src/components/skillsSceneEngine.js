@@ -89,18 +89,21 @@ export function createSkillsScene(host, callbacks, modelData) {
   // so FXAA sees the real background rather than transparent black.
   output.uniforms.workspaceBackground = { value: new THREE.Color('#eeefea').convertLinearToSRGB() };
   output.uniforms.workspaceRuleColor = { value: new THREE.Color('#ced1c4').convertLinearToSRGB() };
-  output.uniforms.workspaceRule = { value: new THREE.Vector3(1, 1, 66.5) };
+  output.uniforms.workspaceRule = { value: new THREE.Vector4(1, 1, 66.5, 0) };
   output.material.fragmentShader = output.material.fragmentShader
     .replace('uniform sampler2D tDiffuse;', `uniform sampler2D tDiffuse;
       uniform vec3 workspaceBackground;
       uniform vec3 workspaceRuleColor;
-      uniform vec3 workspaceRule;`)
+      uniform vec4 workspaceRule;`)
     .replace('// tone mapping', 'float coverage = clamp(gl_FragColor.a, 0.0, 1.0);\n gl_FragColor.rgb /= max(coverage, 0.0001);\n // tone mapping')
     // Composite the drafting rule behind scene coverage, so legs and shadows
     // naturally cover it rather than having a DOM border drawn over them.
     .replace(/\n\s*}\s*$/, `
       float rule = (1.0 - smoothstep(0.25, 0.75, abs(vUv.y * workspaceRule.y - workspaceRule.z)))
-        * step(14.0, vUv.x * workspaceRule.x) * step(14.0, (1.0 - vUv.x) * workspaceRule.x);
+        * step(workspaceRule.w, vUv.x * workspaceRule.x) * step(14.0, (1.0 - vUv.x) * workspaceRule.x);
+      float endTick = (1.0 - smoothstep(0.25, 0.75, abs((1.0 - vUv.x) * workspaceRule.x - 14.0)))
+        * (1.0 - smoothstep(2.0, 2.5, abs(vUv.y * workspaceRule.y - workspaceRule.z)));
+      rule = max(rule, endTick);
       vec3 backdrop = mix(workspaceBackground, workspaceRuleColor, rule);
       gl_FragColor.rgb = mix(backdrop, gl_FragColor.rgb, coverage);
       gl_FragColor.a = 1.0;
@@ -207,7 +210,7 @@ export function createSkillsScene(host, callbacks, modelData) {
   const resize = () => {
     width = Math.max(1, host.clientWidth); height = Math.max(1, host.clientHeight);
     const rule = host.parentElement.querySelector('.scene-footer');
-    output.uniforms.workspaceRule.value.set(width, height, parseFloat(getComputedStyle(rule).bottom) + .5);
+    output.uniforms.workspaceRule.value.set(width, height, parseFloat(getComputedStyle(rule).bottom) + .5, parseFloat(getComputedStyle(rule).left));
     renderer.setSize(width, height); composer.setSize(width, height); fit(); wake();
     fxaa.uniforms.resolution.value.set(1 / (width * renderer.getPixelRatio()), 1 / (height * renderer.getPixelRatio()));
   };
