@@ -7,6 +7,7 @@ import { media } from './media';
 import TechText from './components/TechText';
 import CursorGrid from './components/CursorGrid';
 import PortfolioLike from './components/PortfolioLike';
+import SkillsExperience from './components/SkillsExperience';
 import ParticleSilhouette, { PARTICLE_EXIT_DURATION } from './components/ParticleSilhouette';
 import './styles.css';
 
@@ -274,19 +275,6 @@ function Works() {
   </section>;
 }
 
-const skills = [
-  ['CAD & DESIGN', '建模与工程表达', ['SolidWorks、Creo、AutoCAD', '机械结构建模、工程图绘制', 'KeyShot 模型渲染'], 'M12 3 21 8v9l-9 5-9-5V8zM3 8l9 5 9-5M12 13v9'],
-  ['SIMULATION', '仿真与结构优化', ['Ansys、SolidWorks Simulation', 'Adams 动力学仿真', 'Matlab 运动学求解'], 'M3 20h18M3 14c4-15 7-12 10-4s5 7 8-7'],
-  ['FABRICATION', '加工与样机开发', ['3D 打印、激光切割', '零部件选型、BOM 整理', '样机组装与调试'], 'M4 7h16v14H4zM8 7V3h8v4M4 13h16M10 13v4h4v-4'],
-  ['LANGUAGE', '语言能力', ['CET-4 · 大学英语四级', 'CET-6 · 大学英语六级', 'IELTS · 雅思总分 7.0'], 'M3 12h18M12 3c-8 5-8 13 0 18M12 3c8 5 8 13 0 18'],
-];
-function Skills() {
-  return <section id="skills" className="skills-section section-space"><div className="shell">
-    <div className="section-head" data-reveal><SectionLabel number="03" english="CAPABILITIES">个人能力</SectionLabel><div className="section-heading-row"><h2>从建模到实现。</h2><p>贯穿完整工程开发过程的工具与实践。</p></div></div>
-    <div className="skills-grid">{skills.map(([en, title, lines, path], i) => <article className="skill-card" key={en} data-reveal><div className="skill-top"><span className="mono">0{i + 1}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.15" aria-hidden="true">{i === 3 && <circle cx="12" cy="12" r="9" />}<path d={path} /></svg></div><span className="skill-en mono">{en}</span><h3>{title}</h3><ul>{lines.map(line => <li key={line}>{line}</li>)}</ul></article>)}</div>
-  </div></section>;
-}
-
 const education = [
   { period: '2021.09 — 2025.06', degree: '本科', school: '北京理工大学', schoolEn: 'Beijing Institute of Technology', major: '智能制造工程', majorEn: 'Intelligent Manufacturing Engineering' },
   { period: '2025.08 — 2027.01（预计）', degree: '硕士 · 在读', school: '南洋理工大学', schoolEn: 'Nanyang Technological University', major: '智能制造', majorEn: 'Master of Science in Smart Manufacturing' },
@@ -327,11 +315,11 @@ function App() {
         gsap.utils.toArray('[data-reveal]').forEach(el => gsap.from(el, { y: 30, opacity: 0, duration: .8, ease: 'power2.out', scrollTrigger: { trigger: el, start: 'top 94%', once: true } }));
         return;
       }
-      const chapter = (selector, groups) => {
+      const chapter = (selector, groups, ease = 'power3.out') => {
         const section = app.current.querySelector(selector);
         const timeline = gsap.timeline({ paused: true });
         groups.forEach(([targets, at, y = 22, stagger = .09]) => {
-          timeline.fromTo(section.querySelectorAll(targets), { opacity: 0, y }, { opacity: 1, y: 0, duration: .7, stagger, ease: 'power3.out' }, at);
+          timeline.fromTo(section.querySelectorAll(targets), { opacity: 0, y }, { opacity: 1, y: 0, duration: .7, stagger, ease }, at);
         });
         const trigger = ScrollTrigger.create({
           trigger: section, start: 'top 72%', end: 'bottom top',
@@ -343,7 +331,7 @@ function App() {
       const heading = [['.section-label', 0, 12], ['.section-heading-row > *', .12]];
       chapter('#profile', [['.hero-overline, .hero-name-cn', 0, 14], ['h1', .12, 30], ['.hero-statement', .26], ['.hero-bottom > *', .4], ['.hero-video-caption', .64, 10]]);
       chapter('#works', [...heading, ['.rail-heading', .22, 12], ['.project-tab', .3, 16, .1], ['.project-stage', .26, 0], ['.rail-count, .showcase-hint', .62, 10]]);
-      chapter('#skills', [...heading, ['.skill-card', .28, 26, .12]]);
+      chapter('#skills', [['.section-label', 0, 12], ['.capability-index', .12, 0], ['.capability-note', .28, 0]], 'power2.inOut');
       const learning = [...heading, ['.education-image', .24], ['.education-entry', .32, 22, .14]];
       const contact = [['.contact-heading', .5], ['.contact-email, .contact-links', .64, 16], ['.footer-line', .82, 10]];
       if (context.conditions.desktop) chapter('.education-contact', [...learning, ...contact]);
@@ -382,7 +370,7 @@ function App() {
     else window.addEventListener('load', restoreAnchor, { once: true });
     return () => { cancelAnimationFrame(frame); window.removeEventListener('load', restoreAnchor); };
   }, []);
-  return <div ref={app} className={project ? 'project-page' : 'home-page'}><a className="skip-link" href="#main">跳到主要内容</a><Header project={project} /><main id="main">{project ? <ProjectPage project={project} /> : <><Hero /><Works /><Skills /><div className="education-contact"><Education /><Contact /></div></>}</main>{project && <Contact />}</div>;
+  return <div ref={app} className={project ? 'project-page' : 'home-page'}><a className="skip-link" href="#main">跳到主要内容</a><Header project={project} /><main id="main">{project ? <ProjectPage project={project} /> : <><Hero /><Works /><SkillsExperience /><div className="education-contact"><Education /><Contact /></div></>}</main>{project && <Contact />}</div>;
 }
 
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);

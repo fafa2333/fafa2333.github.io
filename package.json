@@ -13,7 +13,8 @@
     "@hugeicons/core-free-icons": "^4.3.5",
     "gsap": "^3.14.2",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.1.1",

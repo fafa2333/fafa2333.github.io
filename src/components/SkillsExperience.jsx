@@ -1,0 +1,171 @@
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import './skills.css';
+
+const capabilities = [
+  { id: 'monitor', en: 'SOFTWARE SKILLS', title: '软件技能', code: '01',
+    heading: ['让设计可视，', '让分析有据。'],
+    intro: ['从机械结构建模与工程表达，', '到运动学求解、仿真与结构优化。'],
+    details: [
+      ['CAD / DESIGN', 'SolidWorks · Creo · AutoCAD', '机械结构建模、工程图绘制', 'KeyShot 模型渲染'],
+      ['ANALYSIS / SIMULATION', 'Ansys · SolidWorks Simulation', 'Adams 动力学仿真', 'Matlab 运动学求解'],
+    ] },
+  { id: 'robot_arm', en: 'ENGINEERING EXPERIENCE', title: '工程经验', code: '02',
+    heading: ['从结构设计，', '走到样机验证。'],
+    intro: ['用加工与装配检验设计，', '在调试中连接分析与真实反馈。'],
+    details: [
+      ['FABRICATION', '3D 打印、激光切割', '零部件选型、BOM 整理'],
+      ['PROTOTYPING', '样机组装与调试', '仿生机构与移动机器人项目实践'],
+    ] },
+  { id: 'telephone', en: 'LANGUAGE ABILITY', title: '语言能力', code: '03',
+    heading: ['跨越语言，', '连接更多可能。'],
+    intro: ['以英语学习与沟通，', '拓展工程知识与交流的边界。'],
+    details: [
+      ['ENGLISH / CERTIFICATIONS', 'CET-4 · 大学英语四级', 'CET-6 · 大学英语六级'],
+      ['IELTS', '雅思总分 7.0'],
+    ] },
+];
+const overview = { en: 'DESIGN. SIMULATE. MAKE.', title: '能力概览',
+  heading: ['从建模到实现，', '贯穿完整开发过程的工具与实践。'],
+  intro: ['让想法在分析、设计与验证中成形。'],
+  details: [] };
+
+function CapabilityCopy({ item }) {
+  return <>
+    <p className="capability-eyebrow mono" data-capability-row>{item.en}</p>
+    <h2>{item.heading.map(line => <span data-capability-row key={line}>{line}</span>)}</h2>
+    <div className="capability-rule" data-capability-row />
+    <div className="capability-intro">{item.intro.map(line => <p data-capability-row key={line}>{line}</p>)}</div>
+    {item.details.length > 0 && <div className="capability-details">{item.details.map(([label, ...lines]) => <div className="capability-detail" key={label}>
+      <p className="mono capability-detail-label" data-capability-row>{label}</p>
+      {lines.map(line => <p data-capability-row key={line}>{line}</p>)}
+    </div>)}</div>}
+  </>;
+}
+
+function Scene({ selected, onSelect }) {
+  const stage = useRef(null), host = useRef(null), engine = useRef(null);
+  const selectedRef = useRef(selected), selectRef = useRef(onSelect);
+  selectedRef.current = selected; selectRef.current = onSelect;
+  const [near, setNear] = useState(false), [status, setStatus] = useState('loading');
+  const [hovered, setHovered] = useState(null), [layout, setLayout] = useState(null);
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) { setNear(true); observer.disconnect(); }
+    }, { rootMargin: '240px' });
+    observer.observe(stage.current); return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!near) return;
+    let cancelled = false;
+    import('./skillsSceneEngine').then(({ createSkillsScene }) => {
+      if (cancelled) return;
+      try {
+        engine.current = createSkillsScene(host.current, {
+          onReady: () => { if (!cancelled) { setStatus('ready'); engine.current?.select(selectedRef.current); } },
+          onError: () => { if (!cancelled) setStatus('error'); },
+          onHover: name => { if (!cancelled) setHovered(name); },
+          onSelect: name => selectRef.current(name),
+          onLayout: (boxes, dimensions) => { if (!cancelled) setLayout({ boxes, ...dimensions }); },
+        });
+        engine.current.select(selectedRef.current);
+      } catch { setStatus('error'); }
+    }).catch(() => { if (!cancelled) setStatus('error'); });
+    return () => { cancelled = true; engine.current?.dispose(); engine.current = null; };
+  }, [near]);
+  useEffect(() => { engine.current?.select(selected); }, [selected]);
+  const selectedBox = layout?.boxes[selected];
+  const annotationPosition = id => {
+    if (!layout) return {};
+    const box = layout.boxes[id];
+    const compact = layout.width < 600;
+    const labelWidth = id === 'robot_arm' ? (compact ? 145 : 210) : (compact ? 125 : 165);
+    const left = id === 'robot_arm' ? (compact ? box.x - labelWidth * .5 : box.x - labelWidth - 12) : box.x + box.width + 12;
+    const top = id === 'robot_arm' && compact ? box.y - 46 : id === 'telephone' ? box.y + box.height * .65 : box.y + box.height * .25;
+    return { left: Math.max(10, Math.min(layout.width - labelWidth - 10, left)), top: Math.max(12, Math.min(layout.height - 52, top)) };
+  };
+  return <div ref={stage} className={`capability-scene ${status === 'ready' ? 'is-ready' : ''}`} data-scene-status={status}>
+    <div className="capability-canvas" ref={host} />
+    {status !== 'ready' && <div className="capability-poster">
+      {near && <img src="/media/portfolio-scene-preview.webp" alt="工作室场景：显示器、机械臂、电话、桌椅和键鼠" loading="lazy" />}
+      <span className="mono" role="status">{status === 'error' ? '3D 暂不可用 · 可通过下方名称查看能力' : 'LOADING WORKSPACE'}</span>
+    </div>}
+    <div className="scene-drafting" aria-hidden="true"><span /><span /><span /></div>
+    <div className={`scene-annotations ${status === 'ready' ? 'is-projected' : 'is-fallback'}`}>
+      {capabilities.map(item => <button type="button" key={item.id} className={`scene-annotation ${selected === item.id ? 'is-selected' : ''} ${hovered === item.id ? 'is-hovered' : ''}`}
+        style={status === 'ready' ? annotationPosition(item.id) : undefined} data-model={item.id} aria-pressed={selected === item.id} aria-label={`查看${item.title}`}
+        onClick={() => onSelect(item.id)} onPointerEnter={() => engine.current?.hover(item.id)} onPointerLeave={() => engine.current?.hover(null)}
+        onFocus={() => engine.current?.hover(item.id)} onBlur={() => engine.current?.hover(null)}>
+        <span className="annotation-cross" aria-hidden="true" /><span className="annotation-text mono">{item.en}</span>
+      </button>)}
+    </div>
+    <svg className={`scene-selection ${selectedBox && status === 'ready' ? 'is-visible' : ''}`} width="100%" height="100%" aria-hidden="true">
+      {selectedBox && <g transform={`translate(${selectedBox.x - 12} ${selectedBox.y - 12})`}>
+        <rect width={selectedBox.width + 24} height={selectedBox.height + 24} />
+        <path d={`M0 18V0H18 M${selectedBox.width + 6} 0h18v18 M${selectedBox.width + 24} ${selectedBox.height + 6}v18h-18 M18 ${selectedBox.height + 24}H0v-18`} />
+        <text x="0" y="-8">{capabilities.find(item => item.id === selected)?.code} / SELECTED</text>
+      </g>}
+    </svg>
+    <div className="scene-footer"><span className="mono">{selected ? '点击空白处返回全景' : '悬停探索 · 点击查看能力'}</span><button type="button" onClick={() => onSelect(null)} disabled={!selected} aria-label="恢复完整场景">全景 <span aria-hidden="true">↗</span></button></div>
+  </div>;
+}
+
+export default function SkillsExperience() {
+  const section = useRef(null), copy = useRef(null), motion = useRef(null), visible = useRef(false);
+  const current = useRef(null), pending = useRef(null), swapping = useRef(false);
+  const [selected, setSelected] = useState(null), [displayed, setDisplayed] = useState(null);
+  const displayedItem = capabilities.find(item => item.id === displayed) || overview;
+  const animateIn = () => {
+    if (!copy.current) return;
+    motion.current?.kill();
+    const rows = copy.current.querySelectorAll('[data-capability-row]');
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !visible.current) {
+      gsap.set(rows, { opacity: 1, x: 0 }); return;
+    }
+    motion.current = gsap.fromTo(rows, { opacity: 0, x: -36 }, { opacity: 1, x: 0, duration: .48, stagger: .035, ease: 'power2.inOut' });
+  };
+  useLayoutEffect(() => { animateIn(); }, [displayed]);
+  useEffect(() => {
+    const trigger = ScrollTrigger.create({
+      trigger: section.current, start: 'top 72%', end: 'bottom top',
+      onEnter: () => { visible.current = true; if (!swapping.current) animateIn(); },
+      onEnterBack: () => { visible.current = true; if (!swapping.current) animateIn(); },
+      onLeave: () => { visible.current = false; if (!swapping.current) motion.current?.kill(); },
+      onLeaveBack: () => { visible.current = false; if (!swapping.current) motion.current?.kill(); },
+    });
+    visible.current = trigger.isActive;
+    if (visible.current) animateIn();
+    return () => { trigger.kill(); motion.current?.kill(); };
+  }, []);
+  const select = id => {
+    setSelected(id); pending.current = id;
+    if (swapping.current || current.current === id) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !visible.current) {
+      current.current = id; setDisplayed(id); return;
+    }
+    swapping.current = true; motion.current?.kill();
+    motion.current = gsap.to(copy.current.querySelectorAll('[data-capability-row]'), {
+      opacity: 0, x: -36, duration: .26, stagger: .025, ease: 'power2.inOut',
+      onComplete: () => {
+        swapping.current = false; current.current = pending.current; setDisplayed(pending.current);
+        // Returning to the same copy still needs to restore its animated rows.
+        if (current.current === displayed) animateIn();
+      },
+    });
+  };
+  return <section ref={section} id="skills" className="skills-section section-space" onKeyDown={event => { if (event.key === 'Escape') select(null); }}>
+    <div className="shell capability-shell">
+      <div className="section-label"><span className="section-index">03</span><span>个人能力</span><span className="label-en">CAPABILITIES</span></div>
+      <div className="capability-layout">
+        <div className="capability-copy-column">
+          <nav className="capability-index" aria-label="个人能力分类">{capabilities.map(item => <button key={item.id} type="button" className={selected === item.id ? 'is-active' : ''} aria-pressed={selected === item.id} aria-label={item.title} onClick={() => select(item.id)}><span className="mono">{item.code}</span><span className="mono capability-index-name">{item.en}</span><span className="capability-index-mark" aria-hidden="true" /></button>)}</nav>
+          <div ref={copy} className={`capability-copy ${displayed ? '' : 'is-overview'}`} aria-live="polite" aria-atomic="true"><CapabilityCopy item={displayedItem} /></div>
+          <div className="capability-drafting" aria-hidden="true"><span /><span /></div>
+          <p className="capability-note">选择工作台上的物品，了解我的工具与实践。</p>
+        </div>
+        <Scene selected={selected} onSelect={select} />
+      </div>
+    </div>
+  </section>;
+}
