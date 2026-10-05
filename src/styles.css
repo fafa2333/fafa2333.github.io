@@ -200,9 +200,10 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
 .contact-email a { font-size: clamp(19px, 2.6vw, 39px); letter-spacing: -.03em; }
 .contact-email a:hover { color: var(--accent); }
 .contact-email button { padding: 7px 0; color: #a5ad98; background: none; font-size: 11px; }
-.contact-links { display: flex; gap: 28px; font-size: 11px; }
+.contact-links { display: flex; align-items: center; gap: 28px; font-size: 11px; }
+.contact-actions { display: flex; align-items: center; gap: 18px; }
 .contact-links a { display: flex; align-items: center; gap: 8px; }
-.contact-links svg { width: 13px; }
+.contact-links a svg { width: 13px; }
 .contact-links a:hover { color: var(--accent); }
 .footer-line { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding-block: 50px 25px; font-size: 9px; color: #959f87; }
 .footer-like { display: inline-flex; align-items: center; gap: 12px; flex-shrink: 0; }
@@ -210,7 +211,7 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
 .footer-like .pulse-heart { min-width: 44px; min-height: 44px; }
 .footer-like .pulse-heart__pill { border: 1px solid #535c49; }
 .footer-like .pulse-heart[data-liked='true'] .pulse-heart__pill { border-color: #7b8a41; }
-.footer-like .pulse-heart[data-liked='true']:disabled { opacity: 1; }
+.footer-like[aria-busy='true'] .pulse-heart:disabled { opacity: 1; }
 
 /* Project detail pages keep the original public .html URLs. */
 .project-hero { padding-top: 145px; }
@@ -478,7 +479,7 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .home-page .major { margin-top: 8px; font-size: 12px; }
   .home-page .major [lang=en] { font-size: 11px; }
 
-  .home-page .contact { flex-shrink: 0; height: clamp(184px, 28svh, 252px); padding-block: clamp(16px, 2.5svh, 26px); }
+  .home-page .contact { flex-shrink: 0; height: clamp(158px, 25svh, 230px); padding-block: clamp(16px, 2.5svh, 26px); }
   .home-page .contact > .shell { height: 100%; display: grid; grid-template-columns: .95fr 1.05fr; grid-template-rows: 1fr auto; gap: 12px 60px; }
   .home-page .contact-heading { margin: 0; height: 100%; gap: 24px; }
   .home-page .contact h2 { font-size: clamp(25px, 4.2svh, 43px); }
@@ -487,7 +488,7 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .home-page .contact-email { gap: 5px; }
   .home-page .contact-email a { font-size: clamp(20px, 3.2svh, 30px); }
   .home-page .contact-email button { padding-block: 4px; }
-  .home-page .contact-links { flex-direction: column; gap: 12px; white-space: nowrap; }
+  .home-page .contact-links { flex-direction: column; align-items: flex-end; gap: 4px; white-space: nowrap; }
   .home-page .footer-line { grid-column: 1 / -1; padding: 12px 0 0; border-top: 1px solid #4b5142; font-size: 8px; }
 }
 
