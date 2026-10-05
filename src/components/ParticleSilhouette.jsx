@@ -156,6 +156,9 @@ const ParticleSilhouette = ({
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!container || !canvas || !ctx || !src) return undefined;
+    // The copy overlays the canvas. Listen on their shared panel so gaps beside
+    // the text still move the particle field, without intercepting its links.
+    const interactionSurface = container.closest('.showcase-panel') || container;
     setReady(false);
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reducedMotion = motionQuery.matches;
@@ -572,8 +575,8 @@ const ParticleSilhouette = ({
     window.addEventListener('scroll', ensureRenderLoop, { passive: true });
     window.addEventListener('pageshow', resumeAfterNavigation);
     window.addEventListener('pagehide', stopLoop);
-    canvas.addEventListener('pointermove', handlePointerMove, { passive: true });
-    canvas.addEventListener('pointerleave', handlePointerLeave);
+    interactionSurface.addEventListener('pointermove', handlePointerMove, { passive: true });
+    interactionSurface.addEventListener('pointerleave', handlePointerLeave);
     sampleImage();
     return () => {
       alive = false;
@@ -587,8 +590,8 @@ const ParticleSilhouette = ({
       window.removeEventListener('scroll', ensureRenderLoop);
       window.removeEventListener('pageshow', resumeAfterNavigation);
       window.removeEventListener('pagehide', stopLoop);
-      canvas.removeEventListener('pointermove', handlePointerMove);
-      canvas.removeEventListener('pointerleave', handlePointerLeave);
+      interactionSurface.removeEventListener('pointermove', handlePointerMove);
+      interactionSurface.removeEventListener('pointerleave', handlePointerLeave);
       engineRef.current = null;
     };
     // Source changes are commands to this persistent engine, not effect rebuilds.

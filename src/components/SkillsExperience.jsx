@@ -113,6 +113,7 @@ function Scene({ selected, onSelect }) {
 export default function SkillsExperience() {
   const section = useRef(null), copy = useRef(null), motion = useRef(null), visible = useRef(false);
   const current = useRef(null), pending = useRef(null), swapping = useRef(false);
+  const pointerDown = useRef(null);
   const [selected, setSelected] = useState(null), [displayed, setDisplayed] = useState(null);
   const displayedItem = capabilities.find(item => item.id === displayed) || overview;
   const animateIn = () => {
@@ -153,14 +154,24 @@ export default function SkillsExperience() {
       },
     });
   };
-  return <section ref={section} id="skills" className="skills-section section-space" onKeyDown={event => { if (event.key === 'Escape') select(null); }}>
+  const resetFromBackground = event => {
+    // Model clicks are handled by the renderer; controls keep their own action.
+    if (!selected || event.target.closest('canvas, button, a, input, textarea, select, [role="button"]')) return;
+    if (pointerDown.current && Math.hypot(event.clientX - pointerDown.current.x, event.clientY - pointerDown.current.y) > 8) return;
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) return;
+    select(null);
+  };
+  return <section ref={section} id="skills" className="skills-section section-space"
+    onPointerDown={event => { pointerDown.current = { x: event.clientX, y: event.clientY }; }} onClick={resetFromBackground}
+    onKeyDown={event => { if (event.key === 'Escape') select(null); }}>
     <div className="shell capability-shell">
       <div className="section-label"><span className="section-index">03</span><span>个人能力</span><span className="label-en">select one object to view</span></div>
       <div className="capability-layout">
         <div className={`capability-copy-column ${selected ? 'has-selection' : ''}`}>
           <nav className="capability-index" aria-label="个人能力分类">{capabilities.map(item => <button key={item.id} type="button" className={selected === item.id ? 'is-active' : ''} aria-pressed={selected === item.id} aria-label={item.title} onClick={() => select(item.id)}><span className="mono">{item.code}</span><span className="mono capability-index-name">{item.en}</span><span className="capability-index-mark" aria-hidden="true" /></button>)}</nav>
           <div ref={copy} className={`capability-copy ${displayed ? '' : 'is-overview'}`} aria-live="polite" aria-atomic="true"><CapabilityCopy item={displayedItem} /></div>
-          <div className="capability-copy-stripes" aria-hidden="true" />
+          <div className="capability-stripe-space" aria-hidden="true"><div className="capability-copy-stripes" /></div>
           <div className="capability-watermark" aria-hidden="true"><span><span>CAPABILITY</span></span></div>
         </div>
         <Scene selected={selected} onSelect={select} />
