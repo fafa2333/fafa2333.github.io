@@ -4,6 +4,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
+import { gridLattice, gridCellBox } from './gridGeometry.js';
 import './CursorGrid.css';
 
 const FALLOFF_CURVES = {
@@ -106,11 +107,7 @@ const CursorGrid = ({
       canvas.width = Math.max(1, Math.round(w * dpr));
       canvas.height = Math.max(1, Math.round(h * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      cols = Math.ceil(w / p.cellSize) + 1;
-      rows = Math.ceil(h / p.cellSize) + 1;
-      // Center the lattice so edge cells crop evenly on both sides
-      offX = (w - cols * p.cellSize) / 2;
-      offY = (h - rows * p.cellSize) / 2;
+      ({ cols, rows, offX, offY } = gridLattice(w, h, p.cellSize));
       alphas = new Float32Array(cols * rows);
       touched = new Float64Array(cols * rows);
       pulses.length = 0;
@@ -227,9 +224,7 @@ const CursorGrid = ({
         gradient.addColorStop(0, `rgba(${cr}, ${cg}, ${cb}, ${a})`);
         gradient.addColorStop(1, `rgba(${cr}, ${cg}, ${cb}, 0)`);
 
-        const x = cx - half + 0.5;
-        const y = cy - half + 0.5;
-        const s = p.cellSize - 1;
+        const { x, y, size: s } = gridCellBox({ offX, offY }, i % cols, Math.floor(i / cols), p.cellSize);
 
         ctx.beginPath();
         if (p.cellRadius > 0) {

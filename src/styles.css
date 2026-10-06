@@ -59,10 +59,10 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .nav-contact:hover { background: var(--accent); border-color: var(--accent); }
 .menu-toggle { display: none; }
 
-/* V01: full-screen video, with a static poster and independent readable overlay. */
+/* V01: original CAD gear geometry, with a shared intro/continuous renderer. */
 .hero { --hero-right-shift: clamp(14px, 2svh, 20px); min-height: 700px; height: 100svh; position: relative; overflow: hidden; background: var(--cement); }
 .hero-background { position: absolute; inset: -5% 0; background: #d7d8d3; }
-.hero-background video { width: 100%; height: 100%; display: block; object-fit: cover; transform: translateY(var(--hero-right-shift)); }
+.hero-background video, .hero-gears, .hero-gear-poster { width: 100%; height: 100%; display: block; object-fit: cover; transform: translateY(var(--hero-right-shift)); }
 .hero > .hero-cursor-grid { position: absolute; inset: 0; z-index: 0; }
 .hero-wash { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(217,218,213,1) 10%, rgba(217,218,213,0) 23%), linear-gradient(90deg, rgba(217,218,213,.95), rgba(217,218,213,.75) 35%, rgba(217,218,213,.02) 80%), linear-gradient(0deg, rgba(217,218,213,.96), transparent 48%); }
 .hero-content { height: 100%; position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; padding-top: 145px; padding-bottom: 80px; }
@@ -77,16 +77,18 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .title-period { color: #656b60; }
 .hero-statement { font-size: clamp(20px, 2.4vw, 36px); line-height: 1.65; letter-spacing: -.02em; margin-top: 14px; }
 .hero-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: clamp(35px, 6vh, 90px); align-items: end; }
+.hero-actions { position: relative; top: var(--hero-right-shift); }
+.hero-email { position: absolute; bottom: calc(100% + 20px); left: 0; white-space: nowrap; }
 .hero-scroll { display: flex; width: fit-content; align-items: center; gap: 18px; font-size: 13px; }
 .hero-scroll .mono { display: block; font-size: 9px; color: #69705f; margin-top: 7px; }
 .circle-button { width: 55px; height: 55px; background: var(--accent); display: grid; place-items: center; border-radius: 50%; transition: transform .3s; }
 .circle-button svg { width: 22px; transform: rotate(90deg); }
 .hero-scroll:hover .circle-button { transform: translateY(5px); }
-.hero-intro { max-width: 490px; justify-self: end; position: relative; top: var(--hero-right-shift); }
+.hero-intro { max-width: 490px; justify-self: end; position: relative; top: var(--hero-right-shift); font-size: 14px; padding-top: calc(20px + 1lh + 8px); }
 .hero-intro p { font-size: 13px; line-height: 1.95; color: #4e5548; }
-.hero-intro a { display: inline-flex; gap: 18px; align-items: center; margin-top: 20px; border-bottom: 1px solid #9b9f94; padding-bottom: 7px; font-size: 14px; }
-.hero-intro svg { width: 15px; }
-.hero-video-caption { position: absolute; bottom: 20px; width: 100%; padding-inline: var(--gutter); display: flex; justify-content: space-between; align-items: center; gap: 12px; color: #535b49; z-index: 2; }
+.hero-email { display: inline-flex; gap: 18px; align-items: center; border-bottom: 1px solid #9b9f94; padding-bottom: 7px; font-size: 14px; }
+.hero-email svg { width: 15px; }
+.hero-video-caption { position: absolute; bottom: 20px; width: 100%; padding-inline: var(--gutter); display: flex; justify-content: flex-end; align-items: center; gap: 12px; color: #535b49; z-index: 2; }
 .hero-video-caption .mono { font-size: 9px; }
 .hero-video-caption button { background: transparent; display: flex; gap: 14px; font-size: 10px; padding: 10px 0 10px 14px; }
 
@@ -106,7 +108,8 @@ h2 { font-size: clamp(30px, 3.8vw, 58px); line-height: 1.35; letter-spacing: -.0
 .image-panel-bottom .mono { font-size: 8px; }
 
 /* Project selector: vertical icon rail, editorial copy and oversized visual. */
-.project-showcase { display: grid; grid-template-columns: 125px minmax(0, 1fr); gap: 34px; align-items: stretch; }
+.works { --project-rail-width: 125px; }
+.project-showcase { display: grid; grid-template-columns: var(--project-rail-width) minmax(0, 1fr); gap: 34px; align-items: stretch; }
 .project-rail { display: flex; flex-direction: column; align-items: center; justify-content: center; padding-block: 30px; background: repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(117,125,104,.045) 3px, rgba(117,125,104,.045) 4px); border-inline: 1px solid #e4e6de; }
 .rail-heading { font-size: 9px; text-align: center; color: #777f6c; line-height: 1.8; margin-bottom: 28px; }
 .project-tabs { display: flex; flex-direction: column; gap: 24px; position: relative; }
@@ -156,7 +159,7 @@ h2 { font-size: clamp(30px, 3.8vw, 58px); line-height: 1.35; letter-spacing: -.0
 .showcase-detail svg { width: 16px; }
 .showcase-detail:hover { background: var(--accent); color: var(--ink); }
 .showcase-hint { display: flex; align-items: center; justify-content: space-between; gap: 20px; font-size: 10px; color: #7c846f; margin-top: 22px; line-height: 1.8; }
-.showcase-hint .mono { font-size: 9px; }
+.showcase-hint .mono { font-size: 9px; width: var(--project-rail-width); display: flex; justify-content: space-between; letter-spacing: 0; }
 
 .skills-section { background: var(--chapter-surface); }
 
@@ -245,7 +248,8 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .hero-statement { font-size: 28px; }
 }
 @media (max-width: 1100px) {
-  .project-showcase { grid-template-columns: 105px minmax(0,1fr); gap: 22px; }
+  .works { --project-rail-width: 105px; }
+  .project-showcase { grid-template-columns: var(--project-rail-width) minmax(0,1fr); gap: 22px; }
   .project-tab { width: 96px; }
   .project-tab-icon { width: 72px; height: 72px; }
   .project-tab-icon img { width: 62px; height: 62px; }
@@ -261,7 +265,8 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .workflow-grid { grid-template-columns: repeat(3,1fr); }
 }
 @media (max-width: 760px) {
-  .project-showcase { grid-template-columns: 68px minmax(0,1fr); gap: 15px; }
+  .works { --project-rail-width: 68px; }
+  .project-showcase { grid-template-columns: var(--project-rail-width) minmax(0,1fr); gap: 15px; }
   .project-rail { justify-content: start; padding-top: 25px; align-self: start; position: sticky; top: 105px; }
   .rail-heading { font-size: 7px; margin-bottom: 25px; }
   .project-tabs { gap: 24px; }
@@ -287,6 +292,7 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .showcase-meta { font-size: 8px; gap: 8px; margin-bottom: 15px; padding-bottom: 12px; }
   .showcase-topics { font-size: 9px; }
   .showcase-detail { width: 100%; gap: 12px; font-size: 11px; }
+  .showcase-hint .mono { font-size: 5px; }
   .showcase-hint { flex-direction: column; align-items: start; gap: 6px; font-size: 9px; }
   html { scroll-padding-top: 90px; }
   .site-header { padding-block: 20px; }
@@ -305,11 +311,13 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .hero h1 { font-size: 20vw; margin-block: 15px 6px; }
   .hero-statement { font-size: 23px; line-height: 1.6; }
   .hero-wash { background: linear-gradient(90deg,rgba(217,218,213,.87),rgba(217,218,213,.3)),linear-gradient(0deg,rgba(217,218,213,1),transparent 80%); }
-  .hero-background video { object-position: 67% center; }
+  .hero-background video, .hero-gear-poster { object-position: 67% center; }
   .hero-bottom { grid-template-columns: 1fr; gap: 30px; margin-top: 40px; }
-  .hero-intro { grid-row: 1; justify-self: start; max-width: 490px; }
+  .hero-intro { grid-row: 1; justify-self: start; max-width: 490px; padding-top: 0; top: 0; }
+  .hero-actions { top: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
+  .hero-email { position: static; }
   .hero-intro p { font-size: 12px; line-height: 1.95; }
-  .hero-intro a { font-size: 13px; margin-top: 16px; }
+  .hero-email { font-size: 13px; }
   .hero-scroll { gap: 12px; }
   .circle-button { width: 43px; height: 43px; }
   .hero-video-caption { bottom: 15px; align-items: end; }
@@ -362,7 +370,8 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .back-projects { font-size: 19px; }
 }
 @media (max-width: 390px) {
-  .project-showcase { grid-template-columns: 59px minmax(0,1fr); gap: 12px; }
+  .works { --project-rail-width: 59px; }
+  .project-showcase { grid-template-columns: var(--project-rail-width) minmax(0,1fr); gap: 12px; }
   .project-tab { width: 57px; }
   .showcase-panel { padding-inline: 15px; }
   .showcase-art { height: 175px; }
@@ -398,9 +407,10 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   .home-page .hero-statement { font-size: clamp(20px, 3.7svh, 36px); line-height: 1.5; margin-top: 10px; }
   .home-page .hero-bottom { margin-top: clamp(18px, 3.5svh, 45px); }
   .home-page .hero-intro p { font-size: 12px; line-height: 1.8; }
-  .home-page .hero-intro a { margin-top: 12px; }
+  .home-page .hero-intro { padding-top: calc(12px + 1lh + 8px); }
 
-  .home-page .project-showcase { flex: 1; min-height: 0; grid-template-columns: 110px minmax(0, 1fr); gap: 28px; }
+  .home-page .works { --project-rail-width: 110px; }
+  .home-page .project-showcase { flex: 1; min-height: 0; grid-template-columns: var(--project-rail-width) minmax(0, 1fr); gap: 28px; }
   .home-page .project-stage { min-height: 0; }
   .home-page .showcase-panel { min-height: 0; height: 100%; }
   .home-page .project-rail { min-height: 0; padding-block: 8px; }
@@ -464,3 +474,15 @@ figcaption { font-size: 10px; color: var(--muted); margin-top: 15px; line-height
   html { scroll-behavior: auto; }
   *, *:before, *:after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* First paint uses the hero itself, with no separate loading overlay.
+   Inline timeline opacity takes over; removing hero--intro releases defaults. */
+.hero-gears { background: var(--cement); pointer-events: none; }
+.hero-gears[hidden] { display: none; }
+.hero-intro-grid { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.hero--intro .hero-background, .hero--intro .hero-gears { background: transparent; }
+.hero--intro .hero-wash { opacity: 0; }
+.hero--intro .hero-overline, .hero--intro .hero-name-cn,
+.hero--intro h1, .hero--intro .hero-statement, .hero--intro .hero-scroll,
+.hero--intro .hero-email, .hero--intro .hero-intro > *, .hero--intro .hero-video-caption > *,
+.home-page:has(.hero--intro) .site-header > * { opacity: 0; }

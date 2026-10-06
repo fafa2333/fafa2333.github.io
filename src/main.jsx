@@ -9,6 +9,8 @@ import CursorGrid from './components/CursorGrid';
 import PortfolioLike from './components/PortfolioLike';
 import SkillsExperience from './components/SkillsExperience';
 import ParticleSilhouette, { PARTICLE_EXIT_DURATION } from './components/ParticleSilhouette';
+import useHeroIntro from './hero/useHeroIntro';
+import { HERO_GRID } from './components/gridGeometry.js';
 import './styles.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -52,13 +54,11 @@ function SectionLabel({ number, english, children }) {
 }
 
 function Hero() {
-  const video = useRef(null);
   const [paused, setPaused] = useState(reducedMotion);
-  const [failed, setFailed] = useState(false);
   const [visible, setVisible] = useState(true);
+  const heroMotion = useHeroIntro({ paused, visible });
   useEffect(() => {
-    const el = video.current;
-    const section = el?.closest('.hero');
+    const section = heroMotion.section.current;
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
     const change = () => setPaused(query.matches);
     const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting && entry.intersectionRatio > .01), { threshold: [0, .01] });
@@ -70,23 +70,16 @@ function Hero() {
     query.addEventListener('change', change); document.addEventListener('visibilitychange', visibility);
     return () => { observer.disconnect(); query.removeEventListener('change', change); document.removeEventListener('visibilitychange', visibility); };
   }, []);
-  useEffect(() => {
-    if (!video.current) return;
-    let cancelled = false;
-    if (paused || !visible || failed) video.current.pause();
-    else video.current.play().catch(error => {
-      if (!cancelled && error.name !== 'AbortError') setPaused(true);
-    });
-    return () => { cancelled = true; };
-  }, [paused, visible, failed]);
-  return <section id="profile" className="hero" aria-labelledby="hero-title">
+  return <section ref={heroMotion.section} id="profile" className={`hero ${heroMotion.active ? 'hero--intro' : ''}`} aria-labelledby="hero-title">
+    {heroMotion.active && !heroMotion.fallback && <canvas className="hero-intro-grid" aria-hidden="true" />}
     <div className="hero-background" aria-hidden="true">
-      <video ref={video} muted loop playsInline preload="metadata" poster={media.heroPoster} onError={() => setFailed(true)}>{media.heroVideo && <source src={media.heroVideo} type="video/mp4" />}</video>
+      <canvas ref={heroMotion.canvas} className="hero-gears" hidden={heroMotion.fallback} />
+      {heroMotion.fallback && <img className="hero-gear-poster" src={media.heroPoster} alt="" />}
       <div className="hero-wash" />
     </div>
-    <CursorGrid className="hero-cursor-grid" cellSize={112} color="#747a6e" radius={200}
-      falloff="smooth" holdTime={140} fadeDuration={1000} lineWidth={.8} maxOpacity={.26}
-      fillOpacity={0} gridOpacity={0} clickPulse pulseSpeed={540} paused={paused || !visible} />
+    <CursorGrid className="hero-cursor-grid" cellSize={HERO_GRID.cellSize} color={HERO_GRID.color} radius={200}
+      falloff="smooth" holdTime={140} fadeDuration={1000} lineWidth={HERO_GRID.lineWidth} maxOpacity={HERO_GRID.maxOpacity}
+      fillOpacity={0} gridOpacity={0} clickPulse pulseSpeed={540} paused={paused || !visible || heroMotion.active} />
     <div className="hero-content shell">
       <div className="hero-overline"><span className="signal-dot" /><span>MECHANICAL DESIGN × SMART MANUFACTURING</span></div>
       <div className="hero-title-group">
@@ -95,13 +88,13 @@ function Hero() {
           <span className="hero-wordmark-fallback">LI YUFU</span>
           <TechText text="LI YUFU" layout="inline" fontSize="inherit" fontWeight={550} letterSpacing={-.065}
             color="#252724" accentColor="#69705f" reveal="letter" lineStyle="solid" strokeWidth={1.3}
-            specks={6} speed={.7} paused={paused} ariaHidden />
+            specks={6} speed={.7} paused={paused || heroMotion.active} ariaHidden />
         </span><span className="title-period">.</span></h1>
         <p className="hero-statement">从想法，到结构。<br />让设计在真实世界中得到验证。</p>
       </div>
-      <div className="hero-bottom"><a className="hero-scroll" href="#works"><span className="circle-button"><Arrow diagonal={false} /></span><span>探索作品<span className="mono">SCROLL TO EXPLORE</span></span></a><div className="hero-intro"><p>{intro}</p><a href={`mailto:${email}`}>{email}<Arrow /></a></div></div>
+      <div className="hero-bottom"><div className="hero-actions"><a className="hero-email" href={`mailto:${email}`}>{email}<Arrow /></a><a className="hero-scroll" href="#works"><span className="circle-button"><Arrow diagonal={false} /></span><span>探索作品<span className="mono">SCROLL TO EXPLORE</span></span></a></div><div className="hero-intro"><p>{intro}</p></div></div>
     </div>
-    <div className="hero-video-caption"><span className="mono">{media.heroIsPlaceholder ? 'V01 / 齿轮啮合 · 工程线稿动效' : 'V01 / MOTION STUDY'}</span><button type="button" onClick={() => setPaused(!paused)} aria-label={paused ? '播放首页动效' : '暂停首页动效'}>{paused ? '播放' : '暂停'} <span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span></button></div>
+    <div className="hero-video-caption"><button type="button" onClick={() => setPaused(!paused)} aria-label={paused ? '播放首页动效' : '暂停首页动效'}>{paused ? '播放' : '暂停'} <span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span></button></div>
   </section>;
 }
 
@@ -270,7 +263,7 @@ function Works() {
         {projects.filter(project => project.slug !== p.slug).map(project => <div key={project.slug} id={`work-panel-${project.slug}`} role="tabpanel" aria-labelledby={`work-tab-${project.slug}`} hidden />)}
       </div>
     </div>
-    <p className="showcase-hint"><span className="mono">INTERACTIVE INDEX</span></p>
+    <p className="showcase-hint"><span className="mono" aria-label="INTERACTIVE INDEX">{Array.from('INTERACTIVE INDEX').map((letter, i) => <span key={i} aria-hidden="true">{letter === ' ' ? '\u00a0' : letter}</span>)}</span></p>
   </section>;
 }
 
@@ -328,7 +321,6 @@ function App() {
         if (trigger.isActive) timeline.play();
       };
       const heading = [['.section-label', 0, 12], ['.section-heading-row > *', .12]];
-      chapter('#profile', [['.hero-overline, .hero-name-cn', 0, 14], ['h1', .12, 30], ['.hero-statement', .26], ['.hero-bottom > *', .4], ['.hero-video-caption', .64, 10]]);
       chapter('#works', [...heading, ['.rail-heading', .22, 12], ['.project-tab', .3, 16, .1], ['.project-stage', .26, 0], ['.rail-count, .showcase-hint', .62, 10]]);
       chapter('#skills', [['.section-label', 0, 12]], 'power2.inOut');
       const learning = [...heading, ['.education-image', .24], ['.education-entry', .32, 22, .14]];
