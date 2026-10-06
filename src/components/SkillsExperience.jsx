@@ -45,39 +45,53 @@ function CapabilityCopy({ item }) {
   </>;
 }
 
-function SceneSelection({ box, selected, ready }) {
+function SceneSelection({ selected, ready, paintRef }) {
   const group = useRef(null), rect = useRef(null), corners = useRef(null);
-  const frame = useRef({ x: 0, y: 0, width: 0, height: 0 });
-  const previous = useRef(null), tween = useRef(null);
+  const frame = useRef(null), previous = useRef(null), start = useRef(0), from = useRef(null);
   useLayoutEffect(() => {
-    tween.current?.kill();
-    if (!box || !ready) { previous.current = null; return; }
-    const target = { x: box.x - 12, y: box.y - 12, width: box.width + 24, height: box.height + 24 };
-    const paint = () => {
+    paintRef.current = (box, id, now) => {
+      if (!box || !id) { previous.current = null; return; }
+      const target = { x: box.x - 12, y: box.y - 12, width: box.width + 24, height: box.height + 24 };
+      if (previous.current !== id) {
+        from.current = previous.current && frame.current ? { ...frame.current } : { ...target };
+        start.current = now; previous.current = id;
+      }
+      const t = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : Math.min(1, (now - start.current) / 520);
+      const mix = t * t * (3 - 2 * t);
+      frame.current = Object.fromEntries(Object.keys(target).map(key => [key, from.current[key] + (target[key] - from.current[key]) * mix]));
       const { x, y, width, height } = frame.current;
       group.current.setAttribute('transform', `translate(${x} ${y})`);
       rect.current.setAttribute('width', width); rect.current.setAttribute('height', height);
       corners.current.setAttribute('d', `M0 18V0H18 M${width - 18} 0h18v18 M${width} ${height - 18}v18h-18 M18 ${height}H0v-18`);
     };
-    // Continue from the current interpolated frame on rapid changes. Initial
-    // selection and responsive refits use the object's current projected bounds.
-    if (previous.current && previous.current !== selected && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      tween.current = gsap.to(frame.current, { ...target, duration: .52, ease: 'power2.inOut', onUpdate: paint });
-    } else { Object.assign(frame.current, target); paint(); }
-    previous.current = selected;
-    return () => tween.current?.kill();
-  }, [box, selected, ready]);
-  return <svg className={`scene-selection ${box && ready ? 'is-visible' : ''}`} width="100%" height="100%" aria-hidden="true">
+    return () => { paintRef.current = null; };
+  }, [paintRef]);
+  return <svg className={`scene-selection ${selected && ready ? 'is-visible' : ''}`} width="100%" height="100%" aria-hidden="true">
     <g ref={group}><rect ref={rect} /><path ref={corners} /><text x="0" y="-8">{capabilities.find(item => item.id === selected)?.code} / SELECTED</text></g>
   </svg>;
 }
 
-function Scene({ selected, onSelect }) {
+function Scene({ selected, onSelect, controls }) {
   const host = useRef(null), engine = useRef(null);
+  const annotations = useRef({}), selectionPaint = useRef(null);
   const selectedRef = useRef(selected), selectRef = useRef(onSelect);
   selectedRef.current = selected; selectRef.current = onSelect;
   const [status, setStatus] = useState('loading');
-  const [hovered, setHovered] = useState(null), [layout, setLayout] = useState(null);
+  const [hovered, setHovered] = useState(null), [motionStatus, setMotionStatus] = useState('idle');
+  const updateProjection = (boxes, dimensions, now) => {
+    const { width, height } = dimensions;
+    capabilities.forEach(({ id }) => {
+      const element = annotations.current[id], box = boxes[id];
+      if (!element || !box) return;
+      const compact = width < 600;
+      const labelWidth = id === 'robot_arm' ? (compact ? 145 : 210) : (compact ? 125 : 165);
+      const left = id === 'robot_arm' ? (compact ? box.x - labelWidth * .5 : box.x - labelWidth - 12) : box.x + box.width + 12;
+      const top = id === 'robot_arm' && compact ? box.y - 46 : id === 'telephone' ? box.y + box.height * .65 : box.y + box.height * .25;
+      element.style.left = `${Math.max(10, Math.min(width - labelWidth - 10, left))}px`;
+      element.style.top = `${Math.max(12, Math.min(height - 52, top))}px`;
+    });
+    selectionPaint.current?.(boxes[selectedRef.current], selectedRef.current, now);
+  };
   useEffect(() => {
     let cancelled = false;
     const abort = new AbortController();
@@ -94,24 +108,16 @@ function Scene({ selected, onSelect }) {
           onError: () => { if (!cancelled) setStatus('error'); },
           onHover: name => { if (!cancelled) setHovered(name); },
           onSelect: name => selectRef.current(name),
-          onLayout: (boxes, dimensions) => { if (!cancelled) setLayout({ boxes, ...dimensions }); },
+          onLayout: (boxes, dimensions, now) => { if (!cancelled) updateProjection(boxes, dimensions, now); },
+          onMotion: state => { if (!cancelled) setMotionStatus(state); },
         }, modelData);
+        controls.current = engine.current;
         engine.current.select(selectedRef.current);
       } catch { setStatus('error'); }
     }).catch(() => { if (!cancelled) setStatus('error'); });
-    return () => { cancelled = true; abort.abort(); engine.current?.dispose(); engine.current = null; };
+    return () => { cancelled = true; abort.abort(); engine.current?.dispose(); engine.current = null; controls.current = null; };
   }, []);
   useEffect(() => { engine.current?.select(selected); }, [selected]);
-  const selectedBox = layout?.boxes[selected];
-  const annotationPosition = id => {
-    if (!layout) return {};
-    const box = layout.boxes[id];
-    const compact = layout.width < 600;
-    const labelWidth = id === 'robot_arm' ? (compact ? 145 : 210) : (compact ? 125 : 165);
-    const left = id === 'robot_arm' ? (compact ? box.x - labelWidth * .5 : box.x - labelWidth - 12) : box.x + box.width + 12;
-    const top = id === 'robot_arm' && compact ? box.y - 46 : id === 'telephone' ? box.y + box.height * .65 : box.y + box.height * .25;
-    return { left: Math.max(10, Math.min(layout.width - labelWidth - 10, left)), top: Math.max(12, Math.min(layout.height - 52, top)) };
-  };
   return <div className={`capability-scene ${status === 'ready' ? 'is-ready' : ''}`} data-scene-status={status}>
     <div className="capability-canvas" ref={host} />
     {status !== 'ready' && <div className="capability-poster">
@@ -120,20 +126,28 @@ function Scene({ selected, onSelect }) {
     </div>}
     <div className="scene-drafting" aria-hidden="true"><CursorDotField className="scene-dots" /><CursorDotField className="scene-dots scene-dots-lower" /></div>
     <div className={`scene-annotations ${status === 'ready' ? 'is-projected' : 'is-fallback'}`}>
-      {capabilities.map(item => <button type="button" key={item.id} className={`scene-annotation ${selected === item.id ? 'is-selected' : ''} ${hovered === item.id ? 'is-hovered' : ''}`}
-        style={status === 'ready' ? annotationPosition(item.id) : undefined} data-model={item.id} aria-pressed={selected === item.id} aria-label={`查看${item.title}`}
+      {capabilities.map(item => <button type="button" key={item.id} ref={element => { annotations.current[item.id] = element; }} className={`scene-annotation ${selected === item.id ? 'is-selected' : ''} ${hovered === item.id ? 'is-hovered' : ''}`}
+        data-model={item.id} aria-pressed={selected === item.id} aria-label={`查看${item.title}`}
         onClick={() => onSelect(item.id)} onPointerEnter={() => engine.current?.hover(item.id)} onPointerLeave={() => engine.current?.hover(null)}
         onFocus={() => engine.current?.hover(item.id)} onBlur={() => engine.current?.hover(null)}>
         <span className="annotation-cross" aria-hidden="true" /><span className="annotation-text mono">{item.en}</span>
       </button>)}
     </div>
-    <SceneSelection box={selectedBox} selected={selected} ready={status === 'ready'} />
+    <SceneSelection selected={selected} ready={status === 'ready'} paintRef={selectionPaint} />
+    <div className="scene-motion-control">
+      <button type="button" className="mono" disabled={status !== 'ready' || motionStatus === 'requesting' || motionStatus === 'reduced'}
+        aria-pressed={motionStatus === 'enabled'} onClick={() => engine.current?.toggleMotion()}>
+        {motionStatus === 'enabled' ? 'DISABLE MOTION' : motionStatus === 'requesting' ? 'ENABLING…' : 'ENABLE MOTION'}
+      </button>
+      <span role="status">{motionStatus === 'denied' ? '未获授权，可继续点击查看能力' : motionStatus === 'unavailable' ? '设备暂不支持动态效果' : motionStatus === 'reduced' ? '已遵循减少动态效果设置' : ''}</span>
+    </div>
     <div className="scene-footer" aria-hidden="true" />
   </div>;
 }
 
 export default function SkillsExperience() {
   const section = useRef(null), index = useRef(null), copy = useRef(null);
+  const sceneControls = useRef(null);
   const motion = useRef(null), indexMotion = useRef(null), visible = useRef(false);
   const current = useRef(null), pending = useRef(null), swapping = useRef(false);
   const pointerDown = useRef(null);
@@ -216,7 +230,9 @@ export default function SkillsExperience() {
       <div className="section-label"><span className="section-index">03</span><span>个人能力</span><span className="label-en">SELECT ONE OBJECT TO VIEW</span></div>
       <div className="capability-layout">
         <div className={`capability-copy-column ${selected ? 'has-selection' : ''}`}>
-          <nav ref={index} className="capability-index" aria-label="个人能力分类">{capabilities.map(item => <button key={item.id} type="button" className={selected === item.id ? 'is-active' : ''} aria-pressed={selected === item.id} aria-label={item.title} onClick={() => select(item.id)}><span className="mono">{item.code}</span><span className="mono capability-index-name">{item.en}</span><span className="capability-index-mark" aria-hidden="true" /></button>)}</nav>
+          <nav ref={index} className="capability-index" aria-label="个人能力分类">{capabilities.map(item => <button key={item.id} type="button" className={selected === item.id ? 'is-active' : ''} aria-pressed={selected === item.id} aria-label={item.title} onClick={() => select(item.id)}
+            onPointerEnter={event => { if (event.pointerType === 'mouse') sceneControls.current?.hover(item.id); }} onPointerLeave={() => sceneControls.current?.hover(null)}
+            onFocus={() => sceneControls.current?.hover(item.id)} onBlur={() => sceneControls.current?.hover(null)}><span className="mono">{item.code}</span><span className="mono capability-index-name">{item.en}</span><span className="capability-index-mark" aria-hidden="true" /></button>)}</nav>
           <div className="capability-copy-slot">
             <div className="capability-copy is-overview capability-copy-measure" aria-hidden="true" inert><CapabilityCopy item={overview} /></div>
             <div ref={copy} className={`capability-copy ${displayed ? '' : 'is-overview'}`} aria-live="polite" aria-atomic="true"><CapabilityCopy item={displayedItem} /></div>
@@ -224,7 +240,7 @@ export default function SkillsExperience() {
           <div className="capability-stripe-space" aria-hidden="true"><div className="capability-copy-stripes" /></div>
           <div className="capability-watermark" aria-hidden="true"><span><span>CAPABILITY</span></span></div>
         </div>
-        <Scene selected={selected} onSelect={select} />
+        <Scene selected={selected} onSelect={select} controls={sceneControls} />
       </div>
     </div>
   </section>;

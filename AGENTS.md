@@ -1,6 +1,6 @@
 # 作品集网站协作约定
 
-- 用户要求每次网站更新后同步 GitHub：完成浏览器检查与 `pnpm build`，将相关源码和 `docs/` 发布文件一起提交，再推送至 `origin/main`。
+- 用户已暂停每次更新后的自动 GitHub 发布：默认只修改本地网站，完成浏览器检查与 `pnpm build`，不自动推送 GitHub或触发 GitHub Pages 部署。待用户明确要求同步或发布时，再将相关源码和 `docs/` 发布文件一起提交并推送至 `origin/main`。
 - GitHub Pages 使用 `main` 分支的 `docs/` 目录。保留现有页面网址，不直接编辑构建文件。
 - 提交范围限定为当前任务的相关文件，不混入其他未跟踪产物。
 - 03 场景使用独立的 `monitor`、`robot_arm`、`telephone` 对象。保留原始装配与比例，交互不得改变模型结构。

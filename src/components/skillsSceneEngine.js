@@ -7,6 +7,7 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+import { ParallaxController } from './ParallaxController';
 
 const targets = ['monitor', 'robot_arm', 'telephone'];
 const ease = t => t * t * (3 - 2 * t);
@@ -26,12 +27,12 @@ function disposeModel(model) {
   textures.forEach(texture => { texture.dispose(); texture.source.data?.close?.(); });
 }
 
-// Static camera and demand rendering: frames run only while an interaction settles.
+// Demand rendering: camera and materials animate only while an interaction settles.
 // Highlighting operates on materials and a screen-space silhouette, never geometry.
 export function createSkillsScene(host, callbacks, modelData) {
-  const mobile = window.innerWidth < 760;
+  const mobile = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 760;
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, mobile ? 1.5 : 1.75), mobile ? 1.75 : 2));
+  renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, mobile ? 1.25 : 1.5), mobile ? 1.5 : 1.75));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.shadowMap.autoUpdate = false;
@@ -41,7 +42,7 @@ export function createSkillsScene(host, callbacks, modelData) {
   renderer.domElement.setAttribute('aria-label', '等轴测工作室场景，可选择显示器、机械臂和电话');
   host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
-  const camera = new THREE.OrthographicCamera(-2, 2, 2, -2, .01, 30);
+  const camera = new THREE.PerspectiveCamera(14, 1, .01, 100);
   const room = new RoomEnvironment();
   const pmrem = new THREE.PMREMGenerator(renderer);
   const environment = pmrem.fromScene(room, .04);
@@ -105,19 +106,31 @@ export function createSkillsScene(host, callbacks, modelData) {
         * (1.0 - smoothstep(2.0, 2.5, abs(vUv.y * workspaceRule.y - workspaceRule.z)));
       rule = max(rule, endTick);
       vec3 backdrop = mix(workspaceBackground, workspaceRuleColor, rule);
-      gl_FragColor.rgb = mix(backdrop, gl_FragColor.rgb, coverage);
+      // Fade scene coverage horizontally, preserving the continuous drafting
+      // rule underneath. The bottom edge deliberately remains unmasked.
+      float leftFade = smoothstep(0.0, min(110.0, workspaceRule.x * 0.15), vUv.x * workspaceRule.x);
+      gl_FragColor.rgb = mix(backdrop, gl_FragColor.rgb, coverage * leftFade);
       gl_FragColor.a = 1.0;
     }`);
   const fxaa = new ShaderPass(FXAAShader);
   composer.addPass(renderPass); composer.addPass(outline); composer.addPass(output); composer.addPass(fxaa);
 
-  let model, bounds, width = 1, height = 1, frame = 0, pointerFrame = 0, disposed = false;
+  let model, bounds, width = 1, height = 1, viewHeight = 1, frame = 0, pointerFrame = 0, disposed = false;
   let selected = null, hovered = null, visible = false, transitionStart = 0;
   let outlineFrom = 0, outlineTo = 0;
   const roots = {}, boxes = {}, materials = [];
   const pointer = new THREE.Vector2(), raycaster = new THREE.Raycaster();
   const accent = new THREE.Color('#dfff00');
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const center = new THREE.Vector3(), direction = new THREE.Vector3(1, 1, 1).normalize();
+  const look = new THREE.Vector3(), basePosition = new THREE.Vector3(), baseLook = new THREE.Vector3();
+  const fromPosition = new THREE.Vector3(), fromLook = new THREE.Vector3();
+  const toPosition = new THREE.Vector3(), toLook = new THREE.Vector3();
+  let distance = 7, focusStart = 0, focusMoving = false;
+  const orbit = new THREE.Vector3(), orbitRight = new THREE.Vector3(), worldUp = new THREE.Vector3(0, 1, 0);
+  const pivot = new THREE.Vector3(), focusDirection = new THREE.Vector3();
+  const orbitRotation = new THREE.Quaternion(), pitchRotation = new THREE.Quaternion();
+  const parallax = new ParallaxController({ surface: document.documentElement, wake: () => wake(), onMotion: state => callbacks.onMotion(state) });
   const corners = box => Array.from({ length: 8 }, (_, i) => new THREE.Vector3(
     i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z));
   const projectBox = box => {
@@ -129,24 +142,69 @@ export function createSkillsScene(host, callbacks, modelData) {
     if (!model) return;
     const result = {};
     targets.forEach(name => { result[name] = projectBox(boxes[name]); });
-    callbacks.onLayout(result, { width, height });
+    callbacks.onLayout(result, { width, height }, performance.now());
+  };
+  const focus = (immediate = false) => {
+    if (!bounds) return;
+    parallax.setFocus(Boolean(selected));
+    fromPosition.copy(basePosition); fromLook.copy(baseLook);
+    toLook.copy(center);
+    focusDirection.copy(direction);
+    if (selected && boxes[selected]) {
+      toLook.lerp(boxes[selected].getCenter(new THREE.Vector3()), .35);
+      // Move the camera around the assembly rather than rotating its parts.
+      // The phone turns towards its front; the arm reveals its gripper side.
+      if (selected === 'telephone') focusDirection.applyAxisAngle(worldUp, -.32);
+      if (selected === 'robot_arm') focusDirection.applyAxisAngle(worldUp, .28);
+    }
+    // The monitor keeps the overview angle and receives only a closer view.
+    toPosition.copy(toLook).addScaledVector(focusDirection, distance * (selected ? .84 : 1));
+    focusStart = performance.now(); focusMoving = !immediate && !reduced.matches;
+    if (!focusMoving) { basePosition.copy(toPosition); baseLook.copy(toLook); }
+    wake();
   };
   const fit = () => {
     if (!bounds) return;
-    const center = bounds.getCenter(new THREE.Vector3());
+    bounds.getCenter(center);
     camera.position.copy(center).add(new THREE.Vector3(4, 4, 4));
     camera.lookAt(center); camera.updateMatrixWorld();
-    const points = corners(bounds).map(p => p.applyMatrix4(camera.matrixWorldInverse));
-    const halfX = Math.max(...points.map(p => Math.abs(p.x)));
-    const halfY = Math.max(...points.map(p => Math.abs(p.y)));
-    const halfHeight = Math.max(halfY, halfX / (width / height)) * 1.045;
-    camera.top = halfHeight; camera.bottom = -halfHeight;
-    camera.right = halfHeight * width / height; camera.left = -camera.right;
-    camera.updateProjectionMatrix(); layout();
+    const inverse = camera.quaternion.clone().invert();
+    const points = corners(bounds).map(p => p.sub(center).applyQuaternion(inverse));
+    // Extend the viewport below the original composition without scaling or
+    // recentering the model, so zoomed furniture can reach the chapter bottom.
+    camera.setViewOffset(width, viewHeight, 0, 0, width, height);
+    const tangent = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    distance = Math.max(...points.map(p => p.z + Math.max(Math.abs(p.y), Math.abs(p.x) / camera.aspect) * 1.045 / tangent));
+    const diagonal = bounds.getSize(new THREE.Vector3()).length();
+    // Tight perspective depth range keeps the embedded CAD decal from fighting
+    // its nearly coplanar screen surface when the camera moves or zooms.
+    camera.near = Math.max(.1, distance * .15); camera.far = distance + diagonal * 3;
+    baseLook.copy(center); basePosition.copy(center).addScaledVector(direction, distance);
+    camera.updateProjectionMatrix(); focus(true);
+    camera.position.copy(basePosition); look.copy(baseLook); camera.lookAt(look); camera.updateMatrixWorld(); layout();
   };
   const render = now => {
     frame = 0;
     if (disposed || !visible || document.hidden || !model) return;
+    const drifting = parallax.step(now);
+    if (focusMoving) {
+      const progress = reduced.matches ? 1 : Math.min(1, (now - focusStart) / 900);
+      basePosition.lerpVectors(fromPosition, toPosition, ease(progress));
+      baseLook.lerpVectors(fromLook, toLook, ease(progress));
+      focusMoving = progress < 1;
+    }
+    const gain = parallax.gain;
+    // Rotate both camera position and viewing direction around the monitor.
+    // Its projection stays fixed; the rest of the assembly reveals depth.
+    boxes.monitor.getCenter(pivot);
+    orbitRotation.setFromAxisAngle(worldUp, -parallax.current.x * .045 * gain);
+    orbit.subVectors(basePosition, baseLook).applyQuaternion(orbitRotation);
+    orbitRight.crossVectors(worldUp, orbit).normalize();
+    pitchRotation.setFromAxisAngle(orbitRight, -parallax.current.y * .026 * gain);
+    orbitRotation.premultiply(pitchRotation);
+    camera.position.copy(basePosition).sub(pivot).applyQuaternion(orbitRotation).add(pivot);
+    look.copy(baseLook).sub(pivot).applyQuaternion(orbitRotation).add(pivot);
+    camera.lookAt(look); camera.updateMatrixWorld(); layout();
     const progress = reduced.matches ? 1 : Math.min(1, (now - transitionStart) / 420);
     const mix = ease(progress);
     materials.forEach(record => {
@@ -162,7 +220,12 @@ export function createSkillsScene(host, callbacks, modelData) {
     outline.edgeStrength = THREE.MathUtils.lerp(outlineFrom, outlineTo, mix);
     outline.enabled = outline.edgeStrength > .001;
     composer.render();
-    if (progress < 1) frame = requestAnimationFrame(render);
+    host.dataset.cameraMotion = focusMoving || drifting ? 'moving' : 'idle';
+    if (import.meta.env.DEV) {
+      host.dataset.parallax = `${parallax.current.x.toFixed(3)},${parallax.current.y.toFixed(3)}`;
+      host.dataset.cameraPosition = camera.position.toArray().map(v => v.toFixed(4)).join(',');
+    }
+    if (progress < 1 || focusMoving || drifting) frame = requestAnimationFrame(render);
   };
   const wake = () => { if (!frame && visible && !document.hidden && !disposed) frame = requestAnimationFrame(render); };
   const update = () => {
@@ -196,7 +259,7 @@ export function createSkillsScene(host, callbacks, modelData) {
   };
   let latestPointer;
   const move = event => {
-    if (event.pointerType === 'touch') return;
+    if (!visible || document.hidden || event.pointerType !== 'mouse') return;
     latestPointer = { clientX: event.clientX, clientY: event.clientY };
     if (!pointerFrame) pointerFrame = requestAnimationFrame(() => { pointerFrame = 0; hover(hit(latestPointer)); });
   };
@@ -209,19 +272,34 @@ export function createSkillsScene(host, callbacks, modelData) {
   };
   const resize = () => {
     width = Math.max(1, host.clientWidth); height = Math.max(1, host.clientHeight);
+    viewHeight = Math.max(1, host.parentElement.clientHeight);
+    const compact = window.innerWidth < 760 || window.matchMedia('(pointer: coarse)').matches;
+    renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, compact ? 1.25 : 1.5), compact ? 1.5 : 1.75));
     const rule = host.parentElement.querySelector('.scene-footer');
-    output.uniforms.workspaceRule.value.set(width, height, parseFloat(getComputedStyle(rule).bottom) + .5, parseFloat(getComputedStyle(rule).left));
+    const hostRect = host.getBoundingClientRect(), ruleRect = rule.getBoundingClientRect();
+    output.uniforms.workspaceRule.value.set(width, height, height - (ruleRect.top - hostRect.top) - .5, parseFloat(getComputedStyle(rule).left));
     renderer.setSize(width, height); composer.setSize(width, height); fit(); wake();
     fxaa.uniforms.resolution.value.set(1 / (width * renderer.getPixelRatio()), 1 / (height * renderer.getPixelRatio()));
   };
   const sizeObserver = new ResizeObserver(resize); sizeObserver.observe(host);
   const visibilityObserver = new IntersectionObserver(entries => {
     visible = entries[0].isIntersecting;
-    if (visible) wake(); else { cancelAnimationFrame(frame); frame = 0; }
+    parallax.setActivity(visible, reduced.matches);
+    if (visible) wake(); else {
+      cancelAnimationFrame(frame); frame = 0; leave();
+      host.dataset.cameraMotion = 'paused';
+    }
   }); visibilityObserver.observe(host);
-  const visibilityChange = () => { if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else wake(); };
+  const visibilityChange = () => {
+    parallax.setActivity(visible, reduced.matches);
+    if (document.hidden) {
+      cancelAnimationFrame(frame); frame = 0; leave();
+      host.dataset.cameraMotion = 'paused';
+    } else wake();
+  };
+  const preferenceChange = () => { parallax.setActivity(visible, reduced.matches); focus(true); update(); };
   document.addEventListener('visibilitychange', visibilityChange);
-  reduced.addEventListener('change', update);
+  reduced.addEventListener('change', preferenceChange);
   renderer.domElement.addEventListener('pointermove', move);
   renderer.domElement.addEventListener('pointerleave', leave);
   renderer.domElement.addEventListener('pointerdown', pointerDown);
@@ -237,7 +315,7 @@ export function createSkillsScene(host, callbacks, modelData) {
       const lights = [];
       model.traverse(node => { if (node.isLight || node.isCamera) lights.push(node); });
       lights.forEach(node => node.removeFromParent());
-      const originals = new Set();
+      const originals = new Set(), materialCopies = new Map();
       model.traverse(node => {
         if (!node.isMesh) return;
         node.castShadow = true; node.receiveShadow = true;
@@ -245,8 +323,16 @@ export function createSkillsScene(host, callbacks, modelData) {
         while (parent.parent && parent.parent !== model) parent = parent.parent;
         const name = parent.name;
         const clone = material => {
+          const id = `${material.uuid}/${name}`;
+          if (materialCopies.has(id)) return materialCopies.get(id);
           originals.add(material);
           const copy = material.clone();
+          materialCopies.set(id, copy);
+          if (copy.emissiveMap && material.name.includes('Monitor CAD image')) {
+            // The GLB's image lies almost on its screen backing. Bias only this
+            // printed surface in depth so orbiting cannot alternate the layers.
+            copy.polygonOffset = true; copy.polygonOffsetFactor = -2; copy.polygonOffsetUnits = -4;
+          }
           // Keep the small printed decals and screen legible at an oblique angle.
           [copy.map, copy.emissiveMap].filter(Boolean).forEach(texture => {
             texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -286,13 +372,15 @@ export function createSkillsScene(host, callbacks, modelData) {
     }).catch(error => { if (!disposed && error.name !== 'AbortError') callbacks.onError(error); });
 
   return {
-    select(name) { selected = name; update(); },
+    select(name) { if (selected !== name) { selected = name; focus(); } update(); },
+    toggleMotion() { return parallax.toggleMotion(); },
     hover,
     dispose() {
       disposed = true; cancelAnimationFrame(frame); cancelAnimationFrame(pointerFrame);
+      parallax.dispose();
       sizeObserver.disconnect(); visibilityObserver.disconnect();
       document.removeEventListener('visibilitychange', visibilityChange);
-      reduced.removeEventListener('change', update);
+      reduced.removeEventListener('change', preferenceChange);
       renderer.domElement.removeEventListener('pointermove', move);
       renderer.domElement.removeEventListener('pointerleave', leave);
       renderer.domElement.removeEventListener('pointerdown', pointerDown);

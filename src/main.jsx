@@ -137,7 +137,6 @@ function ProjectCopy({ index, outgoing, entering, onDetails }) {
     <h3 aria-label={project.title}>{projectTitleLines[index].map(line => <span className="showcase-title-line" data-copy-row key={line}>{line}</span>)}</h3>
     <div className="showcase-meta" data-copy-row><span>{project.role}</span><span>{project.period}</span></div>
     <p className="showcase-description" data-copy-row>{project.description}</p><p className="showcase-topics" data-copy-row>{project.subtitle}</p>
-    <dl className="showcase-metrics" data-copy-row><div><dt>{project.metricLabel}</dt><dd>{project.metric}</dd></div><div><dt>{project.secondMetricLabel}</dt><dd>{project.secondMetric}</dd></div></dl>
     <a className="showcase-detail" data-copy-row href={`/projects/${project.slug}.html`} onClick={event => onDetails(event, project)}>查看项目详情 <Arrow /></a>
   </div>;
 }
@@ -251,7 +250,7 @@ function Works() {
     if (next !== undefined) { event.preventDefault(); selectProject(next); tabs.current[next]?.focus(); }
   }
   return <section id="works" className="works section-space shell">
-    <div className="section-head" data-reveal><SectionLabel number="02" english="SELECTED WORK">作品集目录</SectionLabel><div className="section-heading-row"><h2>把思考，<br /><span className="muted">做成看得见的作品。</span></h2><p>选择左侧项目，探索工程实践。<br />从机构设计、仿真优化，到样机开发。</p></div></div>
+    <div className="section-head" data-reveal><SectionLabel number="02" english="SELECT ONE PROJECT TO VIEW">作品集目录</SectionLabel><div className="section-heading-row"><h2>把思考，<br /><span className="muted">做成看得见的作品。</span></h2><p>ENGINEERING PORTFOLIO<br />从机构设计、仿真优化，到样机开发。</p></div></div>
     <div className="project-showcase" data-reveal>
       <div className="project-rail"><span className="rail-heading mono">PROJECTS<br />01 — 03</span><div className="project-tabs" role="tablist" aria-label="选择工程项目" aria-orientation="vertical">
         {projects.map((p, i) => <button key={p.slug} ref={el => { tabs.current[i] = el; }} id={`work-tab-${p.slug}`} type="button" role="tab" aria-selected={active === i} aria-controls={`work-panel-${p.slug}`} aria-label={p.title} tabIndex={active === i ? 0 : -1} onClick={() => selectProject(i)} onKeyDown={e => onTabKey(e, i)} className={`project-tab ${active === i ? 'is-active' : ''}`}><span className="project-tab-icon"><span className="project-tab-art"><ProjectIcon type={p.slug} /></span><span className="project-tab-number mono">{p.number}</span></span></button>)}
@@ -271,7 +270,7 @@ function Works() {
         {projects.filter(project => project.slug !== p.slug).map(project => <div key={project.slug} id={`work-panel-${project.slug}`} role="tabpanel" aria-labelledby={`work-tab-${project.slug}`} hidden />)}
       </div>
     </div>
-    <p className="showcase-hint"><span className="mono">INTERACTIVE INDEX</span> 点击线稿图标切换项目 · 大图与过程材料待补充</p>
+    <p className="showcase-hint"><span className="mono">INTERACTIVE INDEX</span></p>
   </section>;
 }
 
