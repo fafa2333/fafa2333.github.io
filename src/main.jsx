@@ -92,7 +92,7 @@ function Hero() {
         </span><span className="title-period">.</span></h1>
         <p className="hero-statement">从想法，到结构。<br />让设计在真实世界中得到验证。</p>
       </div>
-      <div className="hero-bottom"><div className="hero-actions"><a className="hero-email" href={`mailto:${email}`}>{email}<Arrow /></a><a className="hero-scroll" href="#works"><span className="circle-button"><Arrow diagonal={false} /></span><span>探索作品<span className="mono">SCROLL TO EXPLORE</span></span></a></div><div className="hero-intro"><p>{intro}</p></div></div>
+      <div className="hero-bottom"><a className="hero-email" href={`mailto:${email}`}>{email}<Arrow /></a><div className="hero-actions"><a className="hero-scroll" href="#works"><span className="circle-button"><Arrow diagonal={false} /></span><span>探索作品<span className="mono">SCROLL TO EXPLORE</span></span></a></div><div className="hero-intro"><p>{intro}</p></div></div>
     </div>
     <div className="hero-video-caption"><button type="button" onClick={() => setPaused(!paused)} aria-label={paused ? '播放首页动效' : '暂停首页动效'}>{paused ? '播放' : '暂停'} <span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span></button></div>
   </section>;
