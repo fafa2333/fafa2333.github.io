@@ -10,6 +10,7 @@
 .capability-index button.is-active .capability-index-mark { background: var(--accent); border-color: #899819; }
 .capability-copy { --capability-title-size: clamp(29px, 3.3vw, 49px); position: relative; z-index: 1; flex: none; }
 .capability-copy-slot { position: relative; flex: none; }
+.capability-copy-heading, .capability-copy-body { display: contents; }
 .capability-copy-measure { visibility: hidden; pointer-events: none; }
 .capability-copy-slot > .capability-copy:not(.capability-copy-measure) { position: absolute; inset: 0 0 auto; }
 .capability-eyebrow { font-size: 9px; color: var(--muted); letter-spacing: .04em; margin-bottom: 16px; }
@@ -102,18 +103,21 @@
 @media (max-width: 760px) {
   .capability-layout { display: flex; flex-direction: column; margin-top: 25px; min-height: 0; }
   .capability-copy-column { --capability-index-shift: 0px; display: contents; }
-  .capability-copy-slot { order: 1; }
+  .capability-copy-slot { display: contents; }
   .capability-copy-measure { display: none; }
-  .capability-copy-slot > .capability-copy:not(.capability-copy-measure) { position: relative; }
-  .capability-index { order: 3; flex-direction: row; flex-wrap: wrap; gap: 12px 20px; margin-block: 24px 0; }
+  .capability-copy-slot > .capability-copy:not(.capability-copy-measure) { display: contents; }
+  .capability-copy-heading { display: block; order: 1; }
+  .capability-copy-body { display: block; order: 4; margin-top: 24px; }
+  .capability-index { order: 2; flex-direction: row; flex-wrap: wrap; gap: 12px 20px; margin-block: 0; }
   .capability-index button { font-size: 11px; gap: 8px; }
   .capability-index-mark { margin-left: 0; }
   .capability-copy { --capability-title-size: clamp(32px, 7vw, 42px); min-height: 0; margin-top: 0; }
+  .capability-copy h2 { min-height: calc(var(--capability-title-size) * 2.54); }
   .capability-copy.is-overview h2 > span + span { margin-top: 14px; }
   .capability-index-name.mono { font-size: 9px; }
   .capability-details { gap: 15px; margin-top: 24px; }
-  .capability-scene { order: 2; min-height: 0; height: clamp(380px, 108vw, 580px); margin: 24px -12px 0; }
-  .capability-watermark { order: 5; position: relative; right: 0; height: 60px; margin-top: 24px; }
+  .capability-scene { order: 3; min-height: 0; height: clamp(380px, 108vw, 580px); margin: 24px -12px 0; }
+  .capability-watermark { order: 6; position: relative; right: 0; height: 60px; margin-top: 24px; }
   .capability-watermark::after { display: block; }
   .capability-watermark > span { font-size: clamp(44px, 11vw, 65px); }
   .scene-annotation { min-height: 44px; }
@@ -123,7 +127,7 @@
   .scene-motion-control { display: block; }
   .scene-drafting { --scene-decoration-size: 115px; }
   .scene-drafting .scene-dots-lower { bottom: 5%; }
-  .capability-stripe-space { order: 4; flex: none; position: relative; height: 110px; margin-top: 24px; }
+  .capability-stripe-space { order: 5; flex: none; position: relative; height: 110px; margin-top: 24px; }
   .capability-copy-stripes { height: 110px; }
   .skills-section .section-label .label-en { font-size: 8px; letter-spacing: .02em; }
 }

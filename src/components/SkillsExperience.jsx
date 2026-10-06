@@ -34,14 +34,18 @@ const overview = { en: 'DESIGN. SIMULATE. MAKE.', title: '能力概览',
 
 function CapabilityCopy({ item }) {
   return <>
-    <p className="capability-eyebrow mono" data-capability-row>{item.en}</p>
-    <h2>{item.heading.map(line => <span data-capability-row key={line}>{line}</span>)}</h2>
-    <div className="capability-rule" data-capability-row />
-    <div className="capability-intro">{item.intro.map(line => <p data-capability-row key={line}>{line}</p>)}</div>
-    {item.details.length > 0 && <div className="capability-details">{item.details.map(([label, ...lines]) => <div className="capability-detail" key={label}>
-      <p className="mono capability-detail-label" data-capability-row>{label}</p>
-      {lines.map(line => <p data-capability-row key={line}>{line}</p>)}
-    </div>)}</div>}
+    <div className="capability-copy-heading">
+      <p className="capability-eyebrow mono" data-capability-row>{item.en}</p>
+      <h2>{item.heading.map(line => <span data-capability-row key={line}>{line}</span>)}</h2>
+      <div className="capability-rule" data-capability-row />
+    </div>
+    <div className="capability-copy-body">
+      <div className="capability-intro">{item.intro.map(line => <p data-capability-row key={line}>{line}</p>)}</div>
+      {item.details.length > 0 && <div className="capability-details">{item.details.map(([label, ...lines]) => <div className="capability-detail" key={label}>
+        <p className="mono capability-detail-label" data-capability-row>{label}</p>
+        {lines.map(line => <p data-capability-row key={line}>{line}</p>)}
+      </div>)}</div>}
+    </div>
   </>;
 }
 
