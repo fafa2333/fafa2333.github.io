@@ -278,14 +278,17 @@ function Education() {
 }
 
 function Contact() {
-  const [copied, setCopied] = useState(false);
-  const timer = useRef(null);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  async function copy() {
-    try { await navigator.clipboard.writeText(email); setCopied(true); clearTimeout(timer.current); timer.current = setTimeout(() => setCopied(false), 2200); }
-    catch { window.location.href = `mailto:${email}`; }
-  }
-  return <footer id="contact" className="contact"><div className="shell"><div data-reveal><div className="contact-heading"><h2>下一个想法，<br />一起让它发生<span className="accent-text">。</span></h2><a className="contact-orbit magnetic" href={`mailto:${email}`} aria-label="发送邮件联系李玉夫"><Arrow /></a></div></div><div className="contact-bottom"><div className="contact-email"><span className="mono">EMAIL / 联系邮箱</span><a href={`mailto:${email}`}>{email}</a><button onClick={copy} type="button" aria-live="polite">{copied ? '已复制 ✓' : '复制邮箱 ↗'}</button></div><div className="contact-links"><a href="https://github.com/fafa2333" target="_blank" rel="noopener noreferrer">GitHub <Arrow /></a><a href="#main">返回顶部 ↑</a><PortfolioLike /></div></div><div className="footer-line mono"><span>© {new Date().getFullYear()} LI YUFU</span><span className="footer-tagline">DESIGN. SIMULATE. MAKE.</span></div></div></footer>;
+  return <footer id="contact" className="contact"><div className="shell">
+    <div data-reveal><div className="contact-heading"><h2>下一个想法，<br />一起让它发生<span className="accent-text">。</span></h2></div></div>
+    <div className="contact-bottom">
+      <div className="contact-address">
+        <div className="contact-email"><span className="mono">EMAIL / 联系邮箱</span><a className="contact-email-link" href={`mailto:${email}`}>{email}</a><a className="contact-github" href="https://github.com/fafa2333" target="_blank" rel="noopener noreferrer">GitHub <Arrow /></a></div>
+        <a className="contact-orbit magnetic" href={`mailto:${email}`} aria-label="发送邮件联系李玉夫"><Arrow /></a>
+      </div>
+      <div className="contact-links"><a className="contact-top" href="#main">返回顶部 ↑</a><PortfolioLike /></div>
+    </div>
+    <div className="footer-line mono"><span>© {new Date().getFullYear()} LI YUFU</span><span className="footer-tagline">DESIGN. SIMULATE. MAKE.</span></div>
+  </div></footer>;
 }
 
 function ProjectPage({ project: p }) {

@@ -2,11 +2,20 @@ const clamp = value => Math.max(-1, Math.min(1, value));
 const deltaAngle = (value, neutral) => ((value - neutral + 540) % 360) - 180;
 const deadZone = value => Math.abs(value) < .4 ? 0 : value - Math.sign(value) * .4;
 
+// Centering the chapter in the viewport is neutral, including tall mobile
+// chapters. The first/last visible edges match the mouse's left/right limits.
+export function scrollParallaxX({ top, height }, viewportHeight) {
+  if (height <= 0 || viewportHeight <= 0) return 0;
+  const displacement = (viewportHeight - height) / 2 - top;
+  return Math.abs(displacement) < .5 ? 0 : clamp(displacement / ((viewportHeight + height) / 2));
+}
+
 // Mouse and calibrated orientation feed one time-based, demand-rendered filter.
 // This class owns inputs only; the renderer owns camera/focus and all animation.
 export class ParallaxController {
-  constructor({ surface, wake, onMotion, environment = window }) {
+  constructor({ surface, section, wake, onMotion, environment = window }) {
     this.env = environment; this.surface = surface; this.wake = wake; this.onMotion = onMotion;
+    this.section = section; this.scrollX = 0;
     this.target = { x: 0, y: 0 }; this.current = { x: 0, y: 0 };
     this.filtered = { x: 0, y: 0 }; this.neutral = null;
     this.gain = 1; this.focused = false;
@@ -20,14 +29,28 @@ export class ParallaxController {
     this.leave = () => { if (!this.enabled) this.setInput(0, 0); };
     this.orientation = event => this.readOrientation(event);
     this.recalibrate = () => { this.neutral = null; this.filtered.x = this.filtered.y = 0; this.setInput(0, 0); };
+    this.scroll = () => this.updateScroll();
     surface.addEventListener('pointermove', this.move, { passive: true });
     surface.addEventListener('pointerleave', this.leave, { passive: true });
     environment.addEventListener('blur', this.leave);
     this.direction = environment.screen?.orientation;
     this.direction?.addEventListener?.('change', this.recalibrate);
     environment.addEventListener('orientationchange', this.recalibrate);
+    if (section) {
+      environment.addEventListener('scroll', this.scroll, { passive: true });
+      environment.addEventListener('resize', this.scroll, { passive: true });
+    }
   }
   get active() { return this.visible && !this.reduced && !this.env.document.hidden && !this.disposed; }
+  get yawInput() { return clamp(this.current.x + this.scrollX); }
+  updateScroll() {
+    if (!this.active || !this.section) return;
+    const x = scrollParallaxX(this.section.getBoundingClientRect(), this.env.innerHeight);
+    if (x === this.scrollX) return;
+    // Scroll position is already continuous: don't delay the neutral angle
+    // with mouse damping or keep rendering after the user stops scrolling.
+    this.scrollX = x; this.wake();
+  }
   setInput(x, y) {
     this.target.x = clamp(x); this.target.y = clamp(y);
     if (this.active) this.wake();
@@ -35,10 +58,14 @@ export class ParallaxController {
   setActivity(visible, reduced) {
     this.visible = visible; this.reduced = reduced; this.lastTime = 0;
     if (!this.active) {
+      this.scrollX = 0;
       this.target.x = this.target.y = this.current.x = this.current.y = 0;
       this.gain = this.focused ? .2 : 1;
       this.detachSensor();
-    } else if (this.enabled) this.attachSensor();
+    } else {
+      this.updateScroll();
+      if (this.enabled) this.attachSensor();
+    }
   }
   setFocus(focused) { this.focused = focused; if (this.active) this.wake(); }
   async toggleMotion() {
@@ -111,5 +138,9 @@ export class ParallaxController {
     this.env.removeEventListener('blur', this.leave);
     this.direction?.removeEventListener?.('change', this.recalibrate);
     this.env.removeEventListener('orientationchange', this.recalibrate);
+    if (this.section) {
+      this.env.removeEventListener('scroll', this.scroll);
+      this.env.removeEventListener('resize', this.scroll);
+    }
   }
 }

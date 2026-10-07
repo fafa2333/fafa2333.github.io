@@ -130,7 +130,7 @@ export function createSkillsScene(host, callbacks, modelData) {
   const orbit = new THREE.Vector3(), orbitRight = new THREE.Vector3(), worldUp = new THREE.Vector3(0, 1, 0);
   const pivot = new THREE.Vector3(), focusDirection = new THREE.Vector3();
   const orbitRotation = new THREE.Quaternion(), pitchRotation = new THREE.Quaternion();
-  const parallax = new ParallaxController({ surface: document.documentElement, wake: () => wake(), onMotion: state => callbacks.onMotion(state) });
+  const parallax = new ParallaxController({ surface: document.documentElement, section: host.closest('#skills'), wake: () => wake(), onMotion: state => callbacks.onMotion(state) });
   const corners = box => Array.from({ length: 8 }, (_, i) => new THREE.Vector3(
     i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z));
   const projectBox = box => {
@@ -197,7 +197,7 @@ export function createSkillsScene(host, callbacks, modelData) {
     // Rotate both camera position and viewing direction around the monitor.
     // Its projection stays fixed; the rest of the assembly reveals depth.
     boxes.monitor.getCenter(pivot);
-    orbitRotation.setFromAxisAngle(worldUp, -parallax.current.x * .045 * gain);
+    orbitRotation.setFromAxisAngle(worldUp, -parallax.yawInput * .045 * gain);
     orbit.subVectors(basePosition, baseLook).applyQuaternion(orbitRotation);
     orbitRight.crossVectors(worldUp, orbit).normalize();
     pitchRotation.setFromAxisAngle(orbitRight, -parallax.current.y * .026 * gain);
@@ -223,6 +223,7 @@ export function createSkillsScene(host, callbacks, modelData) {
     host.dataset.cameraMotion = focusMoving || drifting ? 'moving' : 'idle';
     if (import.meta.env.DEV) {
       host.dataset.parallax = `${parallax.current.x.toFixed(3)},${parallax.current.y.toFixed(3)}`;
+      host.dataset.scrollParallax = parallax.scrollX.toFixed(3);
       host.dataset.cameraPosition = camera.position.toArray().map(v => v.toFixed(4)).join(',');
     }
     if (progress < 1 || focusMoving || drifting) frame = requestAnimationFrame(render);
@@ -278,7 +279,7 @@ export function createSkillsScene(host, callbacks, modelData) {
     const rule = host.parentElement.querySelector('.scene-footer');
     const hostRect = host.getBoundingClientRect(), ruleRect = rule.getBoundingClientRect();
     output.uniforms.workspaceRule.value.set(width, height, height - (ruleRect.top - hostRect.top) - .5, parseFloat(getComputedStyle(rule).left));
-    renderer.setSize(width, height); composer.setSize(width, height); fit(); wake();
+    renderer.setSize(width, height); composer.setSize(width, height); fit(); parallax.updateScroll(); wake();
     fxaa.uniforms.resolution.value.set(1 / (width * renderer.getPixelRatio()), 1 / (height * renderer.getPixelRatio()));
   };
   const sizeObserver = new ResizeObserver(resize); sizeObserver.observe(host);

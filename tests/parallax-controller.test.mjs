@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ParallaxController } from '../src/components/ParallaxController.js';
+import { ParallaxController, scrollParallaxX } from '../src/components/ParallaxController.js';
 
 class Target extends EventTarget {
   listeners = new Map();
@@ -12,13 +12,13 @@ class Target extends EventTarget {
   removeEventListener(type, callback) { super.removeEventListener(type, callback); this.listeners.get(type)?.delete(callback); }
   emit(type, values = {}) { this.dispatchEvent(Object.assign(new Event(type), values)); }
 }
-function fixture(API = class {}, coarse = false) {
+function fixture(API = class {}, coarse = false, section) {
   const env = new Target(), surface = new Target(), states = [];
   Object.assign(env, { DeviceOrientationEvent: API, isSecureContext: true, innerWidth: 1000, innerHeight: 800,
     document: { hidden: false }, screen: { orientation: Object.assign(new Target(), { angle: 0 }) },
     matchMedia: () => ({ matches: coarse }), setTimeout: () => 1, clearTimeout: () => {} });
   let wakes = 0;
-  const controller = new ParallaxController({ surface, environment: env, wake: () => wakes++, onMotion: state => states.push(state) });
+  const controller = new ParallaxController({ surface, section, environment: env, wake: () => wakes++, onMotion: state => states.push(state) });
   controller.setActivity(true, false);
   return { controller, env, surface, states, wakes: () => wakes };
 }
@@ -90,4 +90,50 @@ test('focus weakens parallax smoothly and restores it without a gain jump', () =
   assert.equal(c.gain, .2); c.setFocus(false); assert.equal(c.gain, .2);
   for (let i = 0; i < 200; i++) c.step(5000 + i * 1000 / 60);
   assert.equal(c.gain, 1); c.dispose();
+});
+
+test('scroll enters from the left, is neutral when centered, and exits to the right', () => {
+  for (const height of [800, 500, 1600]) {
+    const viewport = 800, neutral = (viewport - height) / 2;
+    assert.equal(scrollParallaxX({ top: viewport, height }, viewport), -1);
+    assert.equal(scrollParallaxX({ top: neutral, height }, viewport), 0);
+    assert.equal(scrollParallaxX({ top: -height, height }, viewport), 1);
+    assert.equal(scrollParallaxX({ top: neutral + .1, height }, viewport), 0);
+    assert.ok(scrollParallaxX({ top: neutral + 100, height }, viewport) < 0);
+    assert.ok(scrollParallaxX({ top: neutral - 100, height }, viewport) > 0);
+  }
+});
+
+test('scroll and mouse share bounded yaw without a delayed neutral angle or an idle render loop', () => {
+  const rect = { top: 400, height: 800 };
+  const { controller: c, env, surface, wakes } = fixture(undefined, false, { getBoundingClientRect: () => rect });
+  assert.equal(c.yawInput, -.5);
+  surface.emit('pointermove', { pointerType: 'mouse', clientX: 0, clientY: 400 });
+  for (let i = 0; i < 200; i++) c.step(1000 + i * 1000 / 60);
+  assert.equal(c.yawInput, -1);
+  surface.emit('pointerleave');
+  for (let i = 0; i < 200; i++) c.step(5000 + i * 1000 / 60);
+  rect.top = 0; env.emit('scroll');
+  assert.equal(c.yawInput, 0); assert.equal(c.step(9000), false);
+  const count = wakes(); env.emit('scroll'); assert.equal(wakes(), count);
+  rect.top = -400; env.emit('scroll'); assert.equal(c.yawInput, .5);
+  env.innerHeight = 1200; env.emit('resize'); assert.equal(c.scrollX, .6);
+  c.dispose();
+  assert.equal(env.listeners.get('scroll').size, 0);
+  assert.equal(env.listeners.get('resize').size, 0);
+});
+
+test('scroll works on touch screens without sensor permission and suspends offscreen or with reduced motion', () => {
+  const rect = { top: 400, height: 800 }; let reads = 0, permissions = 0;
+  const { controller: c, env, wakes } = fixture(class { static requestPermission() { permissions++; } }, true,
+    { getBoundingClientRect: () => { reads++; return rect; } });
+  assert.equal(c.scrollX, -.5); assert.equal(permissions, 0);
+  for (const [visible, reduced, hidden] of [[false, false, false], [true, true, false], [true, false, true]]) {
+    env.document.hidden = hidden; c.setActivity(visible, reduced);
+    const count = wakes(), measurements = reads;
+    rect.top = -400; env.emit('scroll'); env.emit('resize');
+    assert.equal(reads, measurements); assert.equal(wakes(), count); assert.equal(c.yawInput, 0);
+  }
+  env.document.hidden = false; c.setActivity(true, false);
+  assert.equal(c.scrollX, .5); assert.equal(permissions, 0); c.dispose();
 });
