@@ -1,0 +1,21 @@
+/* Isolated experiment. Mirrors the site's paper/ink tokens without importing
+   production styles or changing any production component. */
+:root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; color: #252724; background: #f7f7f4; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.experiment { position: relative; width: min(calc(100% - 64px), 1066px); min-height: 100svh; margin-inline: auto; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; }
+.pointcloud-viewer { position: relative; height: clamp(380px, 70svh, 690px); min-width: 0; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; outline: none; }
+canvas[data-dragging="true"] { cursor: grabbing; }
+canvas:focus-visible { outline: 1px solid #a3a69d; outline-offset: 4px; }
+button { position: absolute; bottom: 24px; justify-self: center; font: inherit; font-size: 14px; color: inherit; border: 1px solid #aeb2a7; background: transparent; border-radius: 999px; padding: 11px 21px; cursor: pointer; white-space: nowrap; touch-action: manipulation; }
+button:hover:not(:disabled) { background: #eeefea; }
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible { outline: 2px solid #71756c; outline-offset: 5px; }
+#load-status { position: absolute; inset: 50% 0 auto; margin: 0; text-align: center; font-size: 13px; color: #71756c; pointer-events: none; }
+[hidden] { display: none !important; }
+@media (max-width: 640px) {
+  .experiment { width: calc(100% - 24px); grid-template-columns: 1fr; padding: 18px 0 32px; }
+  .pointcloud-viewer { height: min(72svh, 620px); }
+  button { justify-self: center; align-self: start; }
+}

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f7f7f4" />
+  <title>Point Cloud Switch Test</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <script type="module" crossorigin src="/assets/pointcloudSwitchTest-DI6wTNa_.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-P2Xu9kJm.js">
+  <link rel="modulepreload" crossorigin href="/assets/three.module-BzrIM94C.js">
+  <link rel="modulepreload" crossorigin href="/assets/shaders-ColRMA6B.js">
+  <link rel="modulepreload" crossorigin href="/assets/normalization-JV4qP9JI.js">
+  <link rel="modulepreload" crossorigin href="/assets/styles-l3O0k8di.js">
+  <link rel="modulepreload" crossorigin href="/assets/preview-mode-Bvl1zp3T.js">
+  <link rel="stylesheet" crossorigin href="/assets/preview-mode-BD1k_1NY.css">
+  <link rel="stylesheet" crossorigin href="/assets/pointcloudSwitchTest-FR5MzgXz.css">
+</head>
+<body>
+  <main class="experiment switch-experiment">
+    <div class="pointcloud-viewer">
+      <canvas id="pointcloud-canvas" tabindex="0" aria-label="建筑点云，按住鼠标左键拖动旋转；方向键也可旋转"></canvas>
+      <p id="load-status" role="status" hidden></p>
+    </div>
+    <button id="switch-building" type="button" disabled aria-controls="pointcloud-canvas">切换至 The Hive</button>
+  </main>
+  <noscript>请启用 JavaScript 查看点云实验。</noscript>
+  <script id="pointcloud-diagnostics" type="application/json">{}</script>
+</body>
+</html>

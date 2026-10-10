@@ -2,13 +2,14 @@ import { useEffect, useRef } from 'react';
 
 // A small, demand-rendered spring field for decorative dots. Pointer events are
 // received by the section, so model labels and other overlays cannot block it.
-export default function CursorDotField({ className }) {
+export default function CursorDotField({ className, scale = 1 }) {
   const canvas = useRef(null);
   useEffect(() => {
     const element = canvas.current, context = element.getContext('2d');
     if (!context) return;
     const surface = element.closest('section');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const radius = 2.4 * scale, spacing = 15 * scale, influence = 62 * scale;
     let width = 0, height = 0, points = [], frame = 0, previousTime = 0;
     let visible = false, pointer = null;
     const draw = () => {
@@ -16,8 +17,8 @@ export default function CursorDotField({ className }) {
       context.fillStyle = '#9aa38d';
       context.beginPath();
       for (const point of points) {
-        context.moveTo(point.x + 2.4, point.y);
-        context.arc(point.x, point.y, 2.4, 0, Math.PI * 2);
+        context.moveTo(point.x + radius, point.y);
+        context.arc(point.x, point.y, radius, 0, Math.PI * 2);
       }
       context.fill();
     };
@@ -37,8 +38,8 @@ export default function CursorDotField({ className }) {
         if (pointer) {
           const dx = point.homeX - pointer.x, dy = point.homeY - pointer.y;
           const distance = Math.hypot(dx, dy);
-          if (distance < 62) {
-            const strength = Math.pow(1 - distance / 62, 2) * 12;
+          if (distance < influence) {
+            const strength = Math.pow(1 - distance / influence, 2) * 12 * scale;
             const divisor = Math.max(distance, 1);
             targetX += (dx - dy * .08) / divisor * strength;
             targetY += (dy + dx * .08) / divisor * strength;
@@ -68,7 +69,7 @@ export default function CursorDotField({ className }) {
       element.height = Math.max(1, Math.round(height * ratio));
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       points = [];
-      for (let y = 7.5; y < height; y += 15) for (let x = 7.5; x < width; x += 15) {
+      for (let y = spacing / 2; y < height; y += spacing) for (let x = spacing / 2; x < width; x += spacing) {
         points.push({ homeX: x, homeY: y, x, y, vx: 0, vy: 0 });
       }
       reset();
@@ -77,7 +78,7 @@ export default function CursorDotField({ className }) {
       if (event.pointerType !== 'mouse' || reducedMotion.matches || !visible || document.hidden) return;
       const bounds = element.getBoundingClientRect();
       const x = event.clientX - bounds.left, y = event.clientY - bounds.top;
-      const nearby = x > -62 && y > -62 && x < width + 62 && y < height + 62;
+      const nearby = x > -influence && y > -influence && x < width + influence && y < height + influence;
       if (!nearby && !pointer) return;
       pointer = nearby ? { x, y } : null; wake();
     };
@@ -98,6 +99,6 @@ export default function CursorDotField({ className }) {
       surface.removeEventListener('pointermove', move); surface.removeEventListener('pointerleave', leave);
       document.removeEventListener('visibilitychange', suspend); reducedMotion.removeEventListener('change', suspend);
     };
-  }, []);
+  }, [scale]);
   return <canvas ref={canvas} className={className} aria-hidden="true" />;
 }

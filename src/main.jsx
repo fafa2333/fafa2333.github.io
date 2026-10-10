@@ -8,6 +8,7 @@ import TechText from './components/TechText';
 import CursorGrid from './components/CursorGrid';
 import PortfolioLike from './components/PortfolioLike';
 import SkillsExperience from './components/SkillsExperience';
+import EducationBuilding from './components/EducationBuilding';
 import ParticleSilhouette, { PARTICLE_EXIT_DURATION } from './components/ParticleSilhouette';
 import useHeroIntro from './hero/useHeroIntro';
 import { HERO_GRID } from './components/gridGeometry.js';
@@ -268,12 +269,27 @@ function Works() {
 }
 
 const education = [
-  { period: '2021.09 — 2025.06', degree: '本科', school: '北京理工大学', schoolEn: 'Beijing Institute of Technology', major: '智能制造工程', majorEn: 'Intelligent Manufacturing Engineering' },
-  { period: '2025.08 — 2027.01（预计）', degree: '硕士 · 在读', school: '南洋理工大学', schoolEn: 'Nanyang Technological University', major: '智能制造', majorEn: 'Master of Science in Smart Manufacturing' },
+  { building: 'bit', period: '2021.09 — 2025.06', degree: '本科', school: '北京理工大学', schoolEn: 'Beijing Institute of Technology', major: '智能制造工程', majorEn: 'Intelligent Manufacturing Engineering' },
+  { building: 'hive', period: '2025.08 — 2027.01（预计）', degree: '硕士 · 在读', school: '南洋理工大学', schoolEn: 'Nanyang Technological University', major: '智能制造', majorEn: 'Master of Science in Smart Manufacturing' },
 ];
 function Education() {
+  const [selected, setSelected] = useState('bit');
+  const [displayed, setDisplayed] = useState('bit');
   return <section id="education" className="education section-space shell"><div className="section-head" data-reveal><SectionLabel number="04" english="EDUCATION">教育背景</SectionLabel><div className="section-heading-row"><h2>持续学习，<br /><span className="muted">持续探索。</span></h2><p>从智能制造工程，<br />到智能制造的进一步探索。</p></div></div>
-    <div className="education-layout"><figure className="education-image" data-reveal><ImagePanel src={media.educationImage} alt="校园或实验室影像" code="D02 / LEARNING CONTEXT" type="education" title="校园 / 实验室影像预留" /><figcaption>学习与实践发生的地方。</figcaption></figure><ol className="education-timeline">{education.map(e => <li className="education-entry" key={e.school} data-reveal><div className="education-top"><span className="mono">{e.period}</span><span className="degree-tag">{e.degree}</span></div><div className="bilingual school"><h3>{e.school}</h3><p lang="en">{e.schoolEn}</p></div><div className="bilingual major"><p>{e.major}</p><p lang="en">{e.majorEn}</p></div></li>)}</ol></div>
+    <div className="education-layout">
+      <figure className="education-image" data-reveal>
+        <EducationBuilding selected={selected} displayed={displayed} onDisplay={setDisplayed} />
+      </figure>
+      <ol className="education-timeline">{education.map(e => <li className={`education-entry${displayed === e.building ? ' is-active' : ''}`} key={e.school} data-reveal>
+        <button type="button" className="education-card" onClick={() => setSelected(e.building)} aria-pressed={displayed === e.building} aria-label={`查看${e.school}建筑`}>
+          <div className="education-top"><time className="education-period mono">{e.period}</time><span className="degree-tag">{e.degree}</span></div>
+          <div className="education-details">
+            <div className="bilingual school"><h3>{e.school}</h3><p lang="en">{e.schoolEn}</p></div>
+            <div className="bilingual major"><p>{e.major}</p><p lang="en">{e.majorEn}</p></div>
+          </div>
+        </button>
+      </li>)}</ol>
+    </div>
   </section>;
 }
 

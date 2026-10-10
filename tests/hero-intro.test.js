@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { GEARS, MODULE, NORMAL_SPEED, toothOutline, draftingGuides, gearLayout, interpolatePose } from '../src/hero/gearGeometry.js';
 import { resourceGate, lockIntroScroll } from '../src/hero/introLifecycle.js';
+import { heroIntroFinished, finishHeroIntro } from '../src/components/educationStartup.js';
 import { createGearScene } from '../src/hero/createGearScene.js';
 import { createIntroGrid } from '../src/hero/createIntroGrid.js';
 import { HERO_GRID } from '../src/components/gridGeometry.js';
@@ -45,6 +46,13 @@ test('fast font readiness releases once and cancels the deadline', async () => {
 test('failed font switches to fallback rather than leaving the intro paused', async () => {
   const h = gateHarness(Promise.reject(new Error('font unavailable'))); await Promise.resolve();
   assert.equal(h.gate.ready(), true); assert.equal(h.calls(), 1);
+});
+test('hero completion releases deferred GPU setup once without waiting for building preparation', async () => {
+  let released = 0;
+  heroIntroFinished.then(() => released++);
+  await Promise.resolve(); assert.equal(released, 0);
+  finishHeroIntro(); finishHeroIntro();
+  await Promise.resolve(); assert.equal(released, 1);
 });
 test('never-loading and late fonts have a bounded, single handoff', async () => {
   let resolve; const h = gateHarness(new Promise(r => { resolve = r; }));

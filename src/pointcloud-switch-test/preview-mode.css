@@ -1,0 +1,10 @@
+html[data-preview="card"] .switch-experiment {
+  width: min(calc(100% - 40px), var(--preview-card-width));
+  display: flex; flex-direction: column; justify-content: center;
+  padding-block: 48px; gap: 24px;
+}
+html[data-preview="card"] .switch-experiment .pointcloud-viewer {
+  width: 100%; height: auto; aspect-ratio: var(--preview-card-aspect);
+  flex-shrink: 0;
+}
+html[data-preview="card"] #switch-building { position: static; align-self: center; }

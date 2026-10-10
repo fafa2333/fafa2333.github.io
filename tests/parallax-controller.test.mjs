@@ -104,19 +104,19 @@ test('scroll enters from the left, is neutral when centered, and exits to the ri
   }
 });
 
-test('scroll and mouse share bounded yaw without a delayed neutral angle or an idle render loop', () => {
+test('scroll uses a larger independent rotation and settles at the unchanged mouse angle', () => {
   const rect = { top: 400, height: 800 };
   const { controller: c, env, surface, wakes } = fixture(undefined, false, { getBoundingClientRect: () => rect });
-  assert.equal(c.yawInput, -.5);
+  assert.equal(c.yawAngle, -.175);
   surface.emit('pointermove', { pointerType: 'mouse', clientX: 0, clientY: 400 });
   for (let i = 0; i < 200; i++) c.step(1000 + i * 1000 / 60);
-  assert.equal(c.yawInput, -1);
+  assert.ok(Math.abs(c.yawAngle + .1975) < 1e-12);
   surface.emit('pointerleave');
   for (let i = 0; i < 200; i++) c.step(5000 + i * 1000 / 60);
   rect.top = 0; env.emit('scroll');
-  assert.equal(c.yawInput, 0); assert.equal(c.step(9000), false);
+  assert.equal(c.yawAngle, 0); assert.equal(c.step(9000), false);
   const count = wakes(); env.emit('scroll'); assert.equal(wakes(), count);
-  rect.top = -400; env.emit('scroll'); assert.equal(c.yawInput, .5);
+  rect.top = -400; env.emit('scroll'); assert.equal(c.yawAngle, .175);
   env.innerHeight = 1200; env.emit('resize'); assert.equal(c.scrollX, .6);
   c.dispose();
   assert.equal(env.listeners.get('scroll').size, 0);
@@ -132,8 +132,110 @@ test('scroll works on touch screens without sensor permission and suspends offsc
     env.document.hidden = hidden; c.setActivity(visible, reduced);
     const count = wakes(), measurements = reads;
     rect.top = -400; env.emit('scroll'); env.emit('resize');
-    assert.equal(reads, measurements); assert.equal(wakes(), count); assert.equal(c.yawInput, 0);
+    assert.equal(reads, measurements); assert.equal(wakes(), count); assert.equal(c.yawAngle, 0);
   }
   env.document.hidden = false; c.setActivity(true, false);
   assert.equal(c.scrollX, .5); assert.equal(permissions, 0); c.dispose();
+});
+
+test('entry starts at a fixed angle on either side and blends into a stationary cursor remembered offscreen', () => {
+  for (const side of [-1, 1]) for (const clientX of [0, 1000]) {
+    const rect = { top: -side * 800, height: 800 };
+    const { controller: c, env, surface, wakes } = fixture(undefined, false, { getBoundingClientRect: () => rect });
+    c.setActivity(false, false);
+    const count = wakes();
+    surface.emit('pointermove', { pointerType: 'mouse', clientX, clientY: 200 });
+    assert.equal(wakes(), count);
+    c.setActivity(true, false);
+    assert.equal(c.yawAngle, side * .35);
+    assert.equal(c.pitchInput, 0);
+    rect.top = -side * 400; env.emit('scroll');
+    assert.equal(c.mouseWeight, .5);
+    rect.top = 0; env.emit('scroll');
+    const expectedMouseAngle = clientX === 0 ? -.045 : .045;
+    assert.equal(c.yawAngle, expectedMouseAngle);
+    assert.equal(c.pitchInput, .5);
+    surface.emit('pointermove', { pointerType: 'mouse', clientX, clientY: 200 });
+    assert.equal(c.step(1000), false);
+    assert.equal(c.yawAngle, expectedMouseAngle);
+    c.dispose();
+  }
+});
+
+test('exit continues from a left-biased mouse angle in either scroll direction without saturation', () => {
+  for (const side of [-1, 1]) {
+    const rect = { top: 0, height: 800 };
+    const { controller: c, env, surface } = fixture(undefined, false, { getBoundingClientRect: () => rect });
+    surface.emit('pointermove', { pointerType: 'mouse', clientX: 0, clientY: 400 });
+    for (let i = 0; i < 200; i++) c.step(1000 + i * 1000 / 60);
+    assert.equal(c.yawAngle, -.045);
+    let previous = c.yawAngle;
+    for (const top of [1, 100, 400, 799]) {
+      rect.top = -side * top; env.emit('scroll');
+      assert.ok(side * (c.yawAngle - previous) > 0);
+      assert.equal(c.mouseWeight, 1);
+      previous = c.yawAngle;
+    }
+    assert.ok(Math.abs(c.scrollAngle) > .34); c.dispose();
+  }
+});
+
+test('reversing direction midway through entry or exit does not reset the camera angle', () => {
+  const rect = { top: 800, height: 800 };
+  const { controller: c, env, surface } = fixture(undefined, false, { getBoundingClientRect: () => rect });
+  surface.emit('pointermove', { pointerType: 'mouse', clientX: 0, clientY: 400 });
+  for (let i = 0; i < 200; i++) c.step(1000 + i * 1000 / 60);
+  rect.top = 400; env.emit('scroll'); const before = c.yawAngle;
+  rect.top = 401; env.emit('scroll'); assert.ok(Math.abs(c.yawAngle - before) < .001);
+  rect.top = 400; env.emit('scroll'); assert.equal(c.yawAngle, before);
+  rect.top = 0; env.emit('scroll'); assert.equal(c.yawAngle, -.045);
+  rect.top = -400; env.emit('scroll'); const exit = c.yawAngle;
+  rect.top = -399; env.emit('scroll'); assert.ok(Math.abs(c.yawAngle - exit) < .001);
+  c.dispose();
+});
+
+test('selection disables scroll input while retaining the original focused mouse parallax', () => {
+  const rect = { top: 0, height: 800 }; let reads = 0;
+  const { controller: c, env, surface, wakes } = fixture(undefined, false,
+    { getBoundingClientRect: () => { reads++; return rect; } });
+  c.setFocus(true);
+  surface.emit('pointermove', { pointerType: 'mouse', clientX: 0, clientY: 200 });
+  for (let i = 0; i < 200; i++) c.step(1000 + i * 1000 / 60);
+  assert.equal(c.scrollAngle, 0); assert.equal(c.mouseWeight, 1);
+  assert.equal(c.yawAngle, -.045 * .2); assert.equal(c.pitchInput, .5);
+  const count = wakes(), measurements = reads;
+  rect.top = -400; env.emit('scroll'); env.emit('resize');
+  assert.equal(wakes(), count); assert.equal(reads, measurements);
+  assert.equal(c.yawAngle, -.045 * .2);
+  surface.emit('pointermove', { pointerType: 'mouse', clientX: 1000, clientY: 200 });
+  for (let i = 0; i < 200; i++) c.step(5000 + i * 1000 / 60);
+  assert.equal(c.yawAngle, .045 * .2);
+  c.setFocus(false); const angle = c.yawAngle;
+  assert.equal(angle, .045 * .2);
+  for (let i = 0; i < 200; i++) c.step(9000 + i * 1000 / 60);
+  assert.equal(c.yawAngle, .045 + .175); c.dispose();
+});
+
+test('selecting during entry fades out only scroll rotation, and selected re-entry ignores either side', () => {
+  const rect = { top: 400, height: 800 };
+  const { controller: c, env, surface } = fixture(undefined, false, { getBoundingClientRect: () => rect });
+  surface.emit('pointermove', { pointerType: 'mouse', clientX: 1000, clientY: 200 });
+  for (let i = 0; i < 200; i++) c.step(1000 + i * 1000 / 60);
+  const before = c.yawAngle;
+  c.setFocus(true); assert.equal(c.yawAngle, before);
+  for (let i = 0; i < 200; i++) c.step(5000 + i * 1000 / 60);
+  assert.equal(Math.abs(c.scrollAngle), 0); assert.equal(c.yawAngle, .045 * .2);
+  for (const top of [-800, 800]) {
+    c.setActivity(false, false); rect.top = top;
+    c.setActivity(true, false); env.emit('scroll');
+    assert.equal(c.scrollAngle, 0);
+    // Selected scenes retain the original behavior: only actual pointer input
+    // starts mouse motion after an offscreen pause, not scroll activation.
+    assert.equal(c.yawAngle, 0); assert.equal(c.pitchInput, 0);
+    surface.emit('pointermove', { pointerType: 'mouse', clientX: 1000, clientY: 200 });
+    for (let i = 0; i < 200; i++) c.step(9000 + i * 1000 / 60);
+    assert.equal(c.yawAngle, .045 * .2);
+    assert.equal(c.pitchInput, .5);
+  }
+  c.dispose();
 });

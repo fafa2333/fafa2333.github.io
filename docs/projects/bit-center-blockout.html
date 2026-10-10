@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#e9eae5" />
+  <title>中心教学楼 · Symmetry V6 白模</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <script type="module" crossorigin src="/assets/bitBlockout-CMHkgJam.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-P2Xu9kJm.js">
+  <link rel="modulepreload" crossorigin href="/assets/three.module-BzrIM94C.js">
+  <link rel="modulepreload" crossorigin href="/assets/GLTFLoader-00bxrTeG.js">
+  <link rel="stylesheet" crossorigin href="/assets/bitBlockout-ZltSXlZA.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div><p class="eyebrow">BIT · ZHONGGUANCUN CAMPUS</p><h1>中心教学楼 <span>Symmetry V6 · 统一白模</span></h1></div>
+      <a href="/bit-center-model-notes.md" target="_blank" rel="noopener">建模说明 ↗</a>
+    </header>
+    <section class="viewer" aria-label="中心教学楼交互模型预览">
+      <canvas id="model-canvas" aria-label="拖动旋转，滚轮或双指缩放，右键平移" tabindex="0"></canvas>
+      <div id="status" role="status">正在加载模型…</div>
+      <div class="orientation" id="orientation">东北 3/4 · NORTH–EAST</div>
+      <div class="controls" aria-label="选择模型视角">
+        <button data-view="top">俯视</button><button data-view="east">正面 / 东</button>
+        <button data-view="west">背面 / 西</button><button data-view="ne" aria-pressed="true">东北 3/4</button>
+        <button data-view="sw">西南 3/4</button>
+        <label><input type="checkbox" id="wireframe" />线框</label>
+      </div>
+    </section>
+    <footer>
+      <p>拖动旋转 · 滚轮 / 双指缩放 · 右键平移</p>
+      <p>以正面左半边为基准 · 左右镜像对称<span id="model-info"></span></p>
+    </footer>
+  </main>
+  <noscript>请启用 JavaScript 查看交互模型。</noscript>
+</body>
+</html>

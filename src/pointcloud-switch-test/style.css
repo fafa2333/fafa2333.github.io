@@ -1,0 +1,9 @@
+@import '../pointcloud-test/style.css';
+:root { background: var(--pointcloud-paper); color: var(--ink); }
+body { background: var(--pointcloud-paper); }
+.switch-experiment { width: min(calc(100% - 64px), 1260px); }
+.switch-experiment .pointcloud-viewer { width: min(100%, 1066px); justify-self: center; }
+#switch-building { bottom: auto; right: 0; top: calc(50% - 22px); }
+@media (max-width: 1370px) {
+  #switch-building { top: auto; right: auto; bottom: 24px; }
+}

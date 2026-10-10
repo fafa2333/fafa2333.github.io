@@ -197,10 +197,10 @@ export function createSkillsScene(host, callbacks, modelData) {
     // Rotate both camera position and viewing direction around the monitor.
     // Its projection stays fixed; the rest of the assembly reveals depth.
     boxes.monitor.getCenter(pivot);
-    orbitRotation.setFromAxisAngle(worldUp, -parallax.yawInput * .045 * gain);
+    orbitRotation.setFromAxisAngle(worldUp, -parallax.yawAngle);
     orbit.subVectors(basePosition, baseLook).applyQuaternion(orbitRotation);
     orbitRight.crossVectors(worldUp, orbit).normalize();
-    pitchRotation.setFromAxisAngle(orbitRight, -parallax.current.y * .026 * gain);
+    pitchRotation.setFromAxisAngle(orbitRight, -parallax.pitchInput * .026 * gain);
     orbitRotation.premultiply(pitchRotation);
     camera.position.copy(basePosition).sub(pivot).applyQuaternion(orbitRotation).add(pivot);
     look.copy(baseLook).sub(pivot).applyQuaternion(orbitRotation).add(pivot);
@@ -224,6 +224,8 @@ export function createSkillsScene(host, callbacks, modelData) {
     if (import.meta.env.DEV) {
       host.dataset.parallax = `${parallax.current.x.toFixed(3)},${parallax.current.y.toFixed(3)}`;
       host.dataset.scrollParallax = parallax.scrollX.toFixed(3);
+      host.dataset.parallaxYaw = parallax.yawAngle.toFixed(4);
+      host.dataset.scrollYaw = parallax.scrollAngle.toFixed(4);
       host.dataset.cameraPosition = camera.position.toArray().map(v => v.toFixed(4)).join(',');
     }
     if (progress < 1 || focusMoving || drifting) frame = requestAnimationFrame(render);

@@ -3,7 +3,7 @@ const deltaAngle = (value, neutral) => ((value - neutral + 540) % 360) - 180;
 const deadZone = value => Math.abs(value) < .4 ? 0 : value - Math.sign(value) * .4;
 
 // Centering the chapter in the viewport is neutral, including tall mobile
-// chapters. The first/last visible edges match the mouse's left/right limits.
+// chapters. The first/last visible edges have fixed entry rotations.
 export function scrollParallaxX({ top, height }, viewportHeight) {
   if (height <= 0 || viewportHeight <= 0) return 0;
   const displacement = (viewportHeight - height) / 2 - top;
@@ -16,6 +16,7 @@ export class ParallaxController {
   constructor({ surface, section, wake, onMotion, environment = window }) {
     this.env = environment; this.surface = surface; this.wake = wake; this.onMotion = onMotion;
     this.section = section; this.scrollX = 0;
+    this.mouseBlend = section ? 0 : 1; this.scrollGain = 1; this.mousePosition = null;
     this.target = { x: 0, y: 0 }; this.current = { x: 0, y: 0 };
     this.filtered = { x: 0, y: 0 }; this.neutral = null;
     this.gain = 1; this.focused = false;
@@ -23,10 +24,13 @@ export class ParallaxController {
     this.sensorAttached = false; this.lastTime = 0;
     this.coarse = environment.matchMedia('(pointer: coarse)');
     this.move = event => {
-      if (!this.active || this.coarse.matches || event.pointerType !== 'mouse') return;
-      this.setInput(event.clientX / this.env.innerWidth * 2 - 1, 1 - event.clientY / this.env.innerHeight * 2);
+      if (this.coarse.matches || event.pointerType !== 'mouse') return;
+      // Remember the cursor on other chapters, without waking the hidden scene.
+      // Entry can then blend into its real position even if it hasn't moved.
+      this.mousePosition = { x: event.clientX, y: event.clientY };
+      if (this.active) this.readMouse();
     };
-    this.leave = () => { if (!this.enabled) this.setInput(0, 0); };
+    this.leave = () => { this.mousePosition = null; if (!this.enabled) this.setInput(0, 0); };
     this.orientation = event => this.readOrientation(event);
     this.recalibrate = () => { this.neutral = null; this.filtered.x = this.filtered.y = 0; this.setInput(0, 0); };
     this.scroll = () => this.updateScroll();
@@ -42,32 +46,56 @@ export class ParallaxController {
     }
   }
   get active() { return this.visible && !this.reduced && !this.env.document.hidden && !this.disposed; }
-  get yawInput() { return clamp(this.current.x + this.scrollX); }
+  get mouseWeight() { return 1 + (this.mouseBlend - 1) * this.scrollGain; }
+  get scrollAngle() { return this.scrollX * .35 * this.scrollGain; }
+  get yawAngle() { return this.current.x * .045 * this.gain * this.mouseWeight + this.scrollAngle; }
+  get pitchInput() { return this.current.y * this.mouseWeight; }
+  readMouse() {
+    if (!this.mousePosition) return;
+    this.setInput(this.mousePosition.x / this.env.innerWidth * 2 - 1, 1 - this.mousePosition.y / this.env.innerHeight * 2);
+  }
   updateScroll() {
-    if (!this.active || !this.section) return;
+    if (!this.active || !this.section || this.focused) return;
     const x = scrollParallaxX(this.section.getBoundingClientRect(), this.env.innerHeight);
-    if (x === this.scrollX) return;
+    // Blend the mouse in during entry, then retain that contribution on exit.
+    // Keeping the maximum reached blend also makes mid-entry reversals
+    // continuous: changing scroll direction cannot reset the current angle.
+    const blend = Math.max(this.mouseBlend, 1 - Math.abs(x));
+    if (x === this.scrollX && blend === this.mouseBlend) return;
     // Scroll position is already continuous: don't delay the neutral angle
     // with mouse damping or keep rendering after the user stops scrolling.
-    this.scrollX = x; this.wake();
+    this.scrollX = x; this.mouseBlend = blend; this.wake();
   }
   setInput(x, y) {
     this.target.x = clamp(x); this.target.y = clamp(y);
     if (this.active) this.wake();
   }
   setActivity(visible, reduced) {
+    const wasActive = this.active;
     this.visible = visible; this.reduced = reduced; this.lastTime = 0;
     if (!this.active) {
       this.scrollX = 0;
+      this.mouseBlend = this.section ? 0 : 1;
+      this.scrollGain = this.focused ? 0 : 1;
       this.target.x = this.target.y = this.current.x = this.current.y = 0;
       this.gain = this.focused ? .2 : 1;
       this.detachSensor();
     } else {
+      if (!wasActive && !this.focused && !this.coarse.matches) {
+        this.readMouse();
+        Object.assign(this.current, this.target);
+      }
       this.updateScroll();
       if (this.enabled) this.attachSensor();
     }
   }
-  setFocus(focused) { this.focused = focused; if (this.active) this.wake(); }
+  setFocus(focused) {
+    this.focused = focused;
+    if (this.active) {
+      if (!focused) this.updateScroll();
+      this.wake();
+    }
+  }
   async toggleMotion() {
     if (this.disposed) return;
     if (this.enabled) {
@@ -121,6 +149,10 @@ export class ParallaxController {
     const gainTarget = this.focused ? .2 : 1;
     this.gain += (gainTarget - this.gain) * alpha;
     if (Math.abs(gainTarget - this.gain) < .0002) this.gain = gainTarget;
+    else moving = true;
+    const scrollGainTarget = this.focused ? 0 : 1;
+    this.scrollGain += (scrollGainTarget - this.scrollGain) * alpha;
+    if (Math.abs(scrollGainTarget - this.scrollGain) < .0002) this.scrollGain = scrollGainTarget;
     else moving = true;
     for (const axis of ['x', 'y']) {
       const target = this.active ? this.target[axis] : 0;

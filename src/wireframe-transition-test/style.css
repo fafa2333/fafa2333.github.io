@@ -1,0 +1,18 @@
+:root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--muted); -webkit-font-smoothing: antialiased; }
+.transition-test { width: min(1140px, 100%); min-height: 100svh; margin-inline: auto; padding: clamp(24px, 5vw, 72px); display: flex; align-items: center; justify-content: center; gap: clamp(24px, 5vw, 72px); }
+.transition-viewport { width: min(740px, 100%); min-width: 0; aspect-ratio: 1.12; position: relative; }
+canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: pan-y; cursor: grab; }
+canvas[data-dragging="true"] { cursor: grabbing; }
+canvas[data-transition="true"] { cursor: default; }
+canvas:focus-visible { outline: 1px solid var(--line); outline-offset: 4px; }
+.switch-building { flex: 0 0 auto; padding: 11px 18px; border: 1px solid var(--line); border-radius: 3px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+.switch-building:hover:enabled { border-color: var(--muted); }
+.switch-building:disabled { opacity: .45; cursor: default; }
+.switch-building:focus-visible { outline: 1px solid var(--muted); outline-offset: 4px; }
+.load-status { position: absolute; top: 50%; width: 100%; margin: 0; text-align: center; font-size: 12px; }
+@media (max-width: 680px) {
+  .transition-test { flex-direction: column; gap: 22px; padding: 24px 22px; }
+  .transition-viewport { width: 100%; }
+}

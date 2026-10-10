@@ -4,6 +4,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { createGearScene } from './createGearScene.js';
 import { createIntroGrid } from './createIntroGrid.js';
 import { lockIntroScroll, resourceGate } from './introLifecycle.js';
+import { finishHeroIntro } from '../components/educationStartup.js';
+import { measureIntro } from './introPerformance.js';
 
 let playedInThisDocument = false;
 const enterAtHome = () => !playedInThisDocument && (!location.hash || ['#profile', '#main'].includes(location.hash)) && window.scrollY < 60;
@@ -16,6 +18,7 @@ export default function useHeroIntro({ paused, visible }) {
   activity.current = { paused, visible };
   useLayoutEffect(() => {
     const root = section.current, drawing = canvas.current, wash = root.querySelector('.hero-wash');
+    const stopMeasuring = measureIntro(root);
     const header = root.closest('.home-page').querySelector('.site-header');
     const gridCanvas = root.querySelector('.hero-intro-grid');
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -62,6 +65,7 @@ export default function useHeroIntro({ paused, visible }) {
     function complete() {
       if (finished || disposed) return;
       finished = true; playedInThisDocument = true;
+      stopMeasuring();
       gate?.dispose();
       if (gridCanvas) observer?.unobserve(gridCanvas);
       grid?.dispose();
@@ -75,6 +79,7 @@ export default function useHeroIntro({ paused, visible }) {
       wash.style.removeProperty('opacity');
       root.classList.remove('hero--intro');
       setActive(false); unlock(); updateActivity(); installScrollReveal();
+      finishHeroIntro();
     }
     const context = gsap.context(() => {}, root);
     let timeline;
@@ -98,8 +103,8 @@ export default function useHeroIntro({ paused, visible }) {
           .to(motion, { guideErase: 1, guide: 0, duration: .25, ease: 'power1.inOut' }, 1.62)
           .to(motion, { speed: 1, duration: .35, ease: 'power2.inOut' }, 1.7);
         if (gridCanvas) timeline.to(gridCanvas, { opacity: 0, duration: .25, ease: 'power1.inOut' }, 1.62);
-        // Geometry is synchronous; the sole network-dependent hero resource is
-        // its font. Wait here only if necessary; reject/timeout uses fallback.
+        // Building preparation runs in a worker and never pauses this timeline.
+        // WebGL setup is scheduled after the intro completes.
         gate = resourceGate(document.fonts?.load('10px "IBM Plex Mono"') || Promise.resolve(),
           (seconds, resolve) => { const deadline = gsap.delayedCall(seconds, resolve); return () => deadline.kill(); },
           () => { if (!disposed && !finished && timeline.paused()) timeline.play(); });
@@ -129,6 +134,7 @@ export default function useHeroIntro({ paused, visible }) {
     controller.current = { updateActivity };
     return () => {
       disposed = true; gate?.dispose(); observer.disconnect();
+      stopMeasuring();
       grid?.dispose();
       gsap.ticker.remove(frame); timeline?.kill(); reveal?.kill(); trigger?.kill(); context.revert();
       document.removeEventListener('click', navigate, true); document.removeEventListener('visibilitychange', pageShow);

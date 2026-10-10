@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "source": "V5 surface LiDAR study",
+  "source_sha256": "e94e1aee5265ecf4b8e32c64c887d2006574a50a31ef596b7d143542c6ef96b3",
+  "pointCount": 228564,
+  "stride": 10,
+  "layout": [
+    "position.xyz",
+    "normal.xyz",
+    "linear_ink.rgb",
+    "radius"
+  ],
+  "axis": "Three.js: east +X, up +Y, north -Z; source Z=23 at origin",
+  "density": 5.0,
+  "detailDensity": 12.5,
+  "radius": 0.09,
+  "seed": 2026100804,
+  "candidatePoints": 274812,
+  "removedBuriedPoints": 46248,
+  "pointBytes": 9142576,
+  "depthBytes": 3531184,
+  "optimized": {
+    "pointCount": 114282,
+    "file": "points-light.bin",
+    "radiusMultiplier": 1.1,
+    "pointBytes": 4571296
+  },
+  "depthTriangles": 49044,
+  "paper": "#f7f7f4",
+  "bounds": {
+    "min": [
+      -37.730133056640625,
+      -23.09946060180664,
+      -39.41141128540039
+    ],
+    "max": [
+      33.75200653076172,
+      24.526405334472656,
+      39.661766052246094
+    ]
+  },
+  "defaultQuality": "balanced",
+  "sparse": {
+    "pointCount": 57141,
+    "file": "points-sparse.bin",
+    "radiusMultiplier": 1.8,
+    "pointBytes": 2285656
+  },
+  "balanced": {
+    "pointCount": 100000,
+    "file": "points-balanced.bin",
+    "radiusMultiplier": 1.3,
+    "pointBytes": 4000016
+  }
+}

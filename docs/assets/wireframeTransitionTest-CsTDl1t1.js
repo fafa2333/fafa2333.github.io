@@ -1,0 +1,2 @@
+import"./modulepreload-polyfill-P2Xu9kJm.js";import{t as e}from"./styles-l3O0k8di.js";import{t}from"./viewer-BHlg-ELC.js";var n=e.match(/:root\s*\{([\s\S]*?)\}/)?.[1],r=document.createElement(`style`);r.textContent=`:root { ${n?.match(/--[\w-]+\s*:[^;]+;/g)?.join(`
+`)||``} }`,document.head.append(r);var i=new t(document.querySelector(`.transition-test`));addEventListener(`pagehide`,e=>{e.persisted||i.dispose()});
