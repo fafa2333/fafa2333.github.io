@@ -15,7 +15,7 @@ import { HERO_GRID } from './components/gridGeometry.js';
 import './styles.css';
 
 gsap.registerPlugin(ScrollTrigger);
-const email = 'yufuli99@gmail.com';
+const email = 'contact@liyufu.me';
 const intro = '我专注于智能制造与机械结构设计，围绕仿生机构和移动机器人开展工程实践。从运动分析、结构建模与仿真优化，到零部件加工和样机调试，我希望让设计在真实场景中得到验证，将想法转化为可实现的工程方案。';
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const particleSources = {
