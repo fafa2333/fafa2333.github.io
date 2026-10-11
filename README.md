@@ -1,6 +1,6 @@
 # 李玉夫的工程作品集
 
-网址：https://fafa2333.github.io/
+网址：https://liyufu.me/
 
 React + Vite 多页面项目，采用水泥灰、白色与少量荧光黄。GSAP / ScrollTrigger 负责入场与滚动动效；尊重系统“减少动态效果”偏好。03 标题上方的三项英文入口与介绍采用相同的逐行左侧滑入和向左淡出效果；入口先出现，正文随后衔接，项目切换只更新介绍。
 
@@ -16,6 +16,14 @@ pnpm preview
 ```
 
 `pnpm build` 输出到 `docs/`。GitHub Pages 使用 `main` 分支的 `/docs` 目录；构建产物随源码一起提交、Git push 后发布。当前默认只做本地更新和检查，不自动推送或部署；用户明确要求同步或发布后再推送。不需要额外服务器，子页面刷新和旧链接继续可用。
+
+## 自定义域名
+
+正式域名为 `https://liyufu.me/`，Vite 保持 `base: '/'`，图片、模型、字体和项目链接继续使用站点根路径。`public/CNAME` 只写 `liyufu.me`，构建时自动复制为 `docs/CNAME`，避免清空输出目录后丢失域名绑定文件。不要直接修改 `docs/`。
+
+首页及三个正式项目页提供 canonical 和 Open Graph，分享图复用现有图片；其他模型 / 实验入口只补 canonical，保留已有 `noindex`。`public/sitemap.xml` 只收录首页及三个正式项目页，`public/robots.txt` 声明 sitemap 地址。新增正式项目时同步更新 sitemap。
+
+GitHub 仓库 Settings → Pages 应使用 **Deploy from a branch / main / /docs**，Custom domain 为 `liyufu.me`，启用 Enforce HTTPS。当前只修改本地配置；更改远端 Pages 设置、DNS 或推送部署需用户明确确认。
 
 ## 结构
 
